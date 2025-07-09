@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Bookmark Viewer",
+  "version": "1.0",
+  "description": "A Browser extension for viewing bookmarks",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Bookmark Viewer"
+  },
+  "permissions": [
+    "bookmarks"
+  ],
+  "icons": {
+    "16": "icons/bookmarkviewer-icon.png",
+    "48": "icons/bookmarkviewer-icon.png",
+    "128": "icons/bookmarkviewer-icon.png"
+  }
+}
