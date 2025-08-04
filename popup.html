@@ -331,6 +331,29 @@
     .chrome-bookmarks-button:hover {
       background: linear-gradient(45deg, #357ae8, #2b5ce6);
     }
+    
+    #searchContainer {
+      margin-top: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: center;
+    }
+    
+    #searchInput {
+      width: 90%;
+      max-width: 300px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+      color: #333;
+      transition: border-color 0.3s ease;
+    }
+    
+    #searchInput:focus {
+      border-color: #00bcd4;
+      outline: none;
+    }
   </style>
 </head>
 <body>
@@ -379,6 +402,10 @@
           </div>
         </div>
       </div>
+    </div>
+    
+    <div id="searchContainer">
+      <input type="text" id="searchInput" placeholder="Search bookmarks...">
     </div>
     
     <div id="loading" class="loading" style="display: none;">

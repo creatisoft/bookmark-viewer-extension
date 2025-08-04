@@ -12,12 +12,14 @@ class BookmarkViewer {
     const clearButton = document.getElementById('clearButton');
     const uploadSectionHeader = document.getElementById('uploadSectionHeader');
     const exportButton = document.getElementById('exportButton');
+    const searchInput = document.getElementById('searchInput');
 
     loadChromeBookmarks.addEventListener('click', () => this.loadChromeBookmarks());
     fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
     clearButton.addEventListener('click', () => this.clearBookmarks());
     uploadSectionHeader.addEventListener('click', () => this.toggleAccordion());
     exportButton.addEventListener('click', () => this.exportBookmarks());
+    searchInput.addEventListener('input', (e) => this.filterBookmarks(e.target.value));
   }
 
   async loadChromeBookmarks() {
@@ -368,6 +370,41 @@ class BookmarkViewer {
     a.click();
 
     URL.revokeObjectURL(url);
+  }
+
+  filterBookmarks(query) {
+    const lowerCaseQuery = query.toLowerCase();
+    const filteredBookmarks = this.bookmarks.filter(bookmark =>
+      bookmark.title.toLowerCase().includes(lowerCaseQuery) ||
+      bookmark.url.toLowerCase().includes(lowerCaseQuery)
+    );
+    this.renderFilteredBookmarks(filteredBookmarks);
+  }
+
+  renderFilteredBookmarks(filteredBookmarks) {
+    const container = document.getElementById('bookmarksContainer');
+    const emptyState = document.getElementById('emptyState');
+
+    if (filteredBookmarks.length === 0) {
+      container.innerHTML = '';
+      emptyState.style.display = 'block';
+      return;
+    }
+
+    emptyState.style.display = 'none';
+
+    container.innerHTML = filteredBookmarks.map(bookmark => `
+      <div class="bookmark-card">
+        <div class="bookmark-title">
+          <img src="${this.getFaviconUrl(bookmark.url)}" class="bookmark-favicon" alt="favicon" onerror="this.style.display='none'">
+          <span class="bookmark-title-text">${this.escapeHtml(bookmark.title)}</span>
+        </div>
+        <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="bookmark-url">
+          ${this.escapeHtml(bookmark.url)}
+        </a>
+        ${bookmark.folder ? `<div class="bookmark-folder">${this.escapeHtml(bookmark.folder)}</div>` : ''}
+      </div>
+    `).join('');
   }
 }
 
