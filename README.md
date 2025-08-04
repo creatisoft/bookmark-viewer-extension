@@ -2,12 +2,10 @@
 
 Bookmark Viewer is a browser extension that allows you to view and manage your bookmarks in a user-friendly interface.
 
-<img width="453" alt="Screenshot 2025-07-08 at 7 28 30 PM" src="https://github.com/user-attachments/assets/cf68a825-5302-4fea-879b-cc5af6d5dbc5" />
+<img width="453" height="487" alt="Screenshot 2025-08-03 at 8 54 15 PM" src="https://github.com/user-attachments/assets/14f81cf6-7620-4218-a276-1da087887357" />
 
+<img width="453" height="487" alt="Screenshot 2025-08-03 at 8 55 45 PM" src="https://github.com/user-attachments/assets/3cc520c0-4347-4e03-97e1-366679a03d18" />
 
-<img width="453" alt="Screenshot 2025-07-08 at 7 28 23 PM" src="https://github.com/user-attachments/assets/73a85fe5-4dd9-4a26-a26e-370fbdc093e9" />
-
-<img width="452" alt="Screenshot 2025-07-08 at 5 09 43 PM" src="https://github.com/user-attachments/assets/1ec42cd5-411d-4961-acd7-890f6090b9d9" />
 
 
 
