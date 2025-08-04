@@ -19,7 +19,8 @@ class BookmarkViewer {
     clearButton.addEventListener('click', () => this.clearBookmarks());
     uploadSectionHeader.addEventListener('click', () => this.toggleAccordion());
     exportButton.addEventListener('click', () => this.exportBookmarks());
-    searchInput.addEventListener('input', (e) => this.filterBookmarks(e.target.value));
+    const debouncedFilter = this.debounce((query) => this.filterBookmarks(query), 300);
+    searchInput.addEventListener('input', (e) => debouncedFilter(e.target.value));
   }
 
   async loadChromeBookmarks() {
@@ -180,6 +181,14 @@ class BookmarkViewer {
     return bookmarks;
   }
 
+  debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+  }
+
   renderBookmarks() {
     const container = document.getElementById('bookmarksContainer');
     const emptyState = document.getElementById('emptyState');
@@ -191,9 +200,12 @@ class BookmarkViewer {
     }
 
     emptyState.style.display = 'none';
-    
-    container.innerHTML = this.bookmarks.map(bookmark => `
-      <div class="bookmark-card">
+
+    const fragment = document.createDocumentFragment();
+    this.bookmarks.forEach(bookmark => {
+      const bookmarkCard = document.createElement('div');
+      bookmarkCard.className = 'bookmark-card';
+      bookmarkCard.innerHTML = `
         <div class="bookmark-title">
           <img src="${this.getFaviconUrl(bookmark.url)}" class="bookmark-favicon" alt="favicon" onerror="this.style.display='none'">
           <span class="bookmark-title-text">${this.escapeHtml(bookmark.title)}</span>
@@ -202,8 +214,12 @@ class BookmarkViewer {
           ${this.escapeHtml(bookmark.url)}
         </a>
         ${bookmark.folder ? `<div class="bookmark-folder">${this.escapeHtml(bookmark.folder)}</div>` : ''}
-      </div>
-    `).join('');
+      `;
+      fragment.appendChild(bookmarkCard);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(fragment);
   }
 
   updateStats() {
