@@ -118,6 +118,23 @@
       background: linear-gradient(45deg, #00acc1, #0097a7);
     }
     
+    .export-button {
+      background: linear-gradient(45deg, #4caf50, #43a047);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 5px;
+    }
+
+    .export-button:hover {
+      background: linear-gradient(45deg, #43a047, #388e3c);
+    }
+    
     .clear-button {
       background: linear-gradient(45deg, #ff6b6b, #ee5a52);
       color: white;
@@ -341,6 +358,8 @@
             📁 Upload Bookmark File
           </button>
         </div>
+        
+        <button id="exportButton" class="file-input-button export-button">Export</button>
         
         <button id="clearButton" class="clear-button" style="display: none;">
           🗑️ Clear List

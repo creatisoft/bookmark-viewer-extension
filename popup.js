@@ -11,11 +11,13 @@ class BookmarkViewer {
     const fileInput = document.getElementById('fileInput');
     const clearButton = document.getElementById('clearButton');
     const uploadSectionHeader = document.getElementById('uploadSectionHeader');
+    const exportButton = document.getElementById('exportButton');
 
     loadChromeBookmarks.addEventListener('click', () => this.loadChromeBookmarks());
     fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
     clearButton.addEventListener('click', () => this.clearBookmarks());
     uploadSectionHeader.addEventListener('click', () => this.toggleAccordion());
+    exportButton.addEventListener('click', () => this.exportBookmarks());
   }
 
   async loadChromeBookmarks() {
@@ -348,6 +350,24 @@ class BookmarkViewer {
     } catch (error) {
       console.error('Failed to clear persisted bookmarks:', error);
     }
+  }
+
+  exportBookmarks() {
+    if (this.bookmarks.length === 0) {
+      alert('No bookmarks to export.');
+      return;
+    }
+
+    const dataStr = JSON.stringify(this.bookmarks, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bookmarks.json';
+    a.click();
+
+    URL.revokeObjectURL(url);
   }
 }
 
