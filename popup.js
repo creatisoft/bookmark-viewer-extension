@@ -2,6 +2,7 @@ class BookmarkViewer {
   constructor() {
     this.bookmarks = [];
     this.folders = new Set();
+    this.faviconCache = new Map();
     this.initializeEventListeners();
     this.loadPersistedBookmarks();
   }
@@ -19,8 +20,29 @@ class BookmarkViewer {
     clearButton.addEventListener('click', () => this.clearBookmarks());
     uploadSectionHeader.addEventListener('click', () => this.toggleAccordion());
     exportButton.addEventListener('click', () => this.exportBookmarks());
-    const debouncedFilter = this.debounce((query) => this.filterBookmarks(query), 300);
+
+    // Debounce search to reduce frequent filtering on large lists
+    const debouncedFilter = this.debounce((query) => this.filterBookmarks(query), 250);
     searchInput.addEventListener('input', (e) => debouncedFilter(e.target.value));
+  }
+
+  // Generic debounce utility
+  debounce(func, delay) {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+  }
+
+  // Build a simple search index to speed up filtering
+  buildSearchIndex() {
+    this.bookmarks.forEach(b => {
+      const title = (b.title || '').toLowerCase();
+      const url = (b.url || '').toLowerCase();
+      const folder = (b.folder || '').toLowerCase();
+      b._search = `${title} ${url} ${folder}`;
+    });
   }
 
   async loadChromeBookmarks() {
@@ -29,11 +51,11 @@ class BookmarkViewer {
 
     try {
       const bookmarkTree = await chrome.bookmarks.getTree();
-      // Only reset bookmarks and folders if starting fresh
       this.bookmarks = [];
       this.folders = new Set();
       
       this.extractBookmarksFromTree(bookmarkTree);
+      this.buildSearchIndex();
       
       this.updateFileInfo('Browser Bookmarks', this.bookmarks.length);
       this.renderBookmarks();
@@ -78,7 +100,6 @@ class BookmarkViewer {
       const content = await this.readFile(file);
       const fileExtension = file.name.split('.').pop().toLowerCase();
 
-      // Reset bookmarks and folders when loading new file
       this.bookmarks = [];
       this.folders = new Set();
 
@@ -89,6 +110,8 @@ class BookmarkViewer {
       } else {
         throw new Error('Unsupported file format. Please use HTML or JSON files.');
       }
+
+      this.buildSearchIndex();
 
       this.updateFileInfo(file.name, this.bookmarks.length);
       this.renderBookmarks();
@@ -162,64 +185,76 @@ class BookmarkViewer {
       }
     };
 
-    // Handle different JSON structures
     if (data.roots) {
-      // Chrome bookmark format
       Object.values(data.roots).forEach(root => {
         if (root.children) {
           root.children.forEach(item => extractBookmarks(item, root.name || 'Bookmarks'));
         }
       });
     } else if (Array.isArray(data)) {
-      // Simple array format
       data.forEach(item => extractBookmarks(item));
     } else {
-      // Single object or other format
       extractBookmarks(data);
     }
 
     return bookmarks;
   }
 
-  debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func.apply(this, args), delay);
-    };
+  // Unified renderer with batching for large lists
+  renderBookmarks() {
+    this.renderListInBatches(this.bookmarks);
   }
 
-  renderBookmarks() {
+  renderFilteredBookmarks(filteredBookmarks) {
+    this.renderListInBatches(filteredBookmarks);
+  }
+
+  createBookmarkCard(bookmark) {
+    const card = document.createElement('div');
+    card.className = 'bookmark-card';
+    card.innerHTML = `
+      <div class="bookmark-title">
+        <img src="${this.getFaviconUrl(bookmark.url)}" loading="lazy" class="bookmark-favicon" alt="favicon" onerror="this.style.display='none'">
+        <span class="bookmark-title-text">${this.escapeHtml(bookmark.title)}</span>
+      </div>
+      <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="bookmark-url">
+        ${this.escapeHtml(bookmark.url)}
+      </a>
+      ${bookmark.folder ? `<div class=\"bookmark-folder\">${this.escapeHtml(bookmark.folder)}</div>` : ''}
+    `;
+    return card;
+  }
+
+  renderListInBatches(list) {
     const container = document.getElementById('bookmarksContainer');
     const emptyState = document.getElementById('emptyState');
 
-    if (this.bookmarks.length === 0) {
-      container.innerHTML = '';
+    container.innerHTML = '';
+
+    if (!list || list.length === 0) {
       emptyState.style.display = 'block';
       return;
     }
 
     emptyState.style.display = 'none';
 
-    const fragment = document.createDocumentFragment();
-    this.bookmarks.forEach(bookmark => {
-      const bookmarkCard = document.createElement('div');
-      bookmarkCard.className = 'bookmark-card';
-      bookmarkCard.innerHTML = `
-        <div class="bookmark-title">
-          <img src="${this.getFaviconUrl(bookmark.url)}" class="bookmark-favicon" alt="favicon" onerror="this.style.display='none'">
-          <span class="bookmark-title-text">${this.escapeHtml(bookmark.title)}</span>
-        </div>
-        <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="bookmark-url">
-          ${this.escapeHtml(bookmark.url)}
-        </a>
-        ${bookmark.folder ? `<div class="bookmark-folder">${this.escapeHtml(bookmark.folder)}</div>` : ''}
-      `;
-      fragment.appendChild(bookmarkCard);
-    });
+    const batchSize = 200;
+    let index = 0;
 
-    container.innerHTML = '';
-    container.appendChild(fragment);
+    const renderChunk = () => {
+      const frag = document.createDocumentFragment();
+      const end = Math.max(Math.min(index + batchSize, list.length), index);
+      for (; index < end; index++) {
+        frag.appendChild(this.createBookmarkCard(list[index]));
+      }
+      container.appendChild(frag);
+
+      if (index < list.length) {
+        requestAnimationFrame(renderChunk);
+      }
+    };
+
+    requestAnimationFrame(renderChunk);
   }
 
   updateStats() {
@@ -246,6 +281,8 @@ class BookmarkViewer {
   clearBookmarks() {
     this.bookmarks = [];
     this.folders.clear();
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
     document.getElementById('fileInput').value = '';
     document.getElementById('fileInfo').textContent = '';
     document.getElementById('bookmarksContainer').innerHTML = '';
@@ -321,7 +358,10 @@ class BookmarkViewer {
   getFaviconUrl(url) {
     try {
       const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+      if (this.faviconCache.has(domain)) return this.faviconCache.get(domain);
+      const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+      this.faviconCache.set(domain, iconUrl);
+      return iconUrl;
     } catch (error) {
       return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04IDRMMTIgOEw4IDEyTDQgOEw4IDRaIiBmaWxsPSIjQ0NDQ0NDIi8+Cjwvc3ZnPgo=';
     }
@@ -336,6 +376,7 @@ class BookmarkViewer {
       if (savedBookmarks) {
         this.bookmarks = JSON.parse(savedBookmarks);
         this.folders = new Set(JSON.parse(savedFolders || '[]'));
+        this.buildSearchIndex();
         
         if (this.bookmarks.length > 0) {
           this.updateFileInfo(savedSource || 'Saved Bookmarks', this.bookmarks.length);
@@ -389,39 +430,17 @@ class BookmarkViewer {
   }
 
   filterBookmarks(query) {
-    const lowerCaseQuery = query.toLowerCase();
-    const filteredBookmarks = this.bookmarks.filter(bookmark =>
-      bookmark.title.toLowerCase().includes(lowerCaseQuery) ||
-      bookmark.url.toLowerCase().includes(lowerCaseQuery)
-    );
+    const q = (query || '').toLowerCase();
+    if (!q) {
+      // Render full list when query is cleared
+      this.renderBookmarks();
+      return;
+    }
+    const filteredBookmarks = this.bookmarks.filter(b => b._search && b._search.includes(q));
     this.renderFilteredBookmarks(filteredBookmarks);
   }
 
-  renderFilteredBookmarks(filteredBookmarks) {
-    const container = document.getElementById('bookmarksContainer');
-    const emptyState = document.getElementById('emptyState');
-
-    if (filteredBookmarks.length === 0) {
-      container.innerHTML = '';
-      emptyState.style.display = 'block';
-      return;
-    }
-
-    emptyState.style.display = 'none';
-
-    container.innerHTML = filteredBookmarks.map(bookmark => `
-      <div class="bookmark-card">
-        <div class="bookmark-title">
-          <img src="${this.getFaviconUrl(bookmark.url)}" class="bookmark-favicon" alt="favicon" onerror="this.style.display='none'">
-          <span class="bookmark-title-text">${this.escapeHtml(bookmark.title)}</span>
-        </div>
-        <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="bookmark-url">
-          ${this.escapeHtml(bookmark.url)}
-        </a>
-        ${bookmark.folder ? `<div class="bookmark-folder">${this.escapeHtml(bookmark.folder)}</div>` : ''}
-      </div>
-    `).join('');
-  }
+  // ...existing code...
 }
 
 // Initialize the bookmark viewer when the page loads
