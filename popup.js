@@ -422,7 +422,7 @@ class BookmarkViewer {
 
     if (bookmarks.length === 0) {
       throw new Error('No valid bookmarks found in the file. Please check the format.');
-=======
+
     // Handle Chrome bookmark export format
     if (data.roots) {
       Object.values(data.roots).forEach(root => {
