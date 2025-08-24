@@ -3,28 +3,8 @@ class BookmarkViewer {
     this.bookmarks = [];
     this.folders = new Set();
     this.faviconCache = new Map();
-    
-    // Add global error handler to prevent popup from closing
-    window.addEventListener('error', (event) => {
-      console.error('Global error caught:', event.error);
-      this.showError(`Unexpected error: ${event.error?.message || 'Unknown error'}`);
-      event.preventDefault();
-    });
-
-    window.addEventListener('unhandledrejection', (event) => {
-      console.error('Unhandled promise rejection:', event.reason);
-      this.showError(`Promise error: ${event.reason?.message || event.reason}`);
-      event.preventDefault();
-    });
-
-    try {
-      this.initializeEventListeners();
-      this.loadPersistedBookmarks();
-      console.log('BookmarkViewer initialized successfully');
-    } catch (error) {
-      console.error('Error initializing BookmarkViewer:', error);
-      this.showError(`Failed to initialize extension: ${error.message}`);
-    }
+    this.initializeEventListeners();
+    this.loadPersistedBookmarks();
   }
 
   initializeEventListeners() {
@@ -57,27 +37,12 @@ class BookmarkViewer {
 
   // Build a simple search index to speed up filtering
   buildSearchIndex() {
-    try {
-      if (!Array.isArray(this.bookmarks)) {
-        console.warn('Bookmarks is not an array, skipping search index build');
-        return;
-      }
-      
-      this.bookmarks.forEach((b, index) => {
-        try {
-          if (b && typeof b === 'object') {
-            const title = (b.title || '').toString().toLowerCase();
-            const url = (b.url || '').toString().toLowerCase();
-            const folder = (b.folder || '').toString().toLowerCase();
-            b._search = `${title} ${url} ${folder}`;
-          }
-        } catch (itemError) {
-          console.warn(`Error processing bookmark at index ${index}:`, itemError);
-        }
-      });
-    } catch (error) {
-      console.error('Error building search index:', error);
-    }
+    this.bookmarks.forEach(b => {
+      const title = (b.title || '').toLowerCase();
+      const url = (b.url || '').toLowerCase();
+      const folder = (b.folder || '').toLowerCase();
+      b._search = `${title} ${url} ${folder}`;
+    });
   }
 
   async loadChromeBookmarks() {
@@ -128,36 +93,27 @@ class BookmarkViewer {
     const file = event.target.files[0];
     if (!file) return;
 
-    console.log('Starting file upload:', file.name, file.type, file.size);
     this.showLoading(true);
     this.hideError();
 
     try {
       const content = await this.readFile(file);
       const fileExtension = file.name.split('.').pop().toLowerCase();
-      
-      console.log('File read successfully, extension:', fileExtension, 'Content length:', content.length);
 
       this.bookmarks = [];
       this.folders = new Set();
 
       if (fileExtension === 'html') {
-        console.log('Parsing as HTML bookmarks');
         this.bookmarks = this.parseHTMLBookmarks(content);
       } else if (fileExtension === 'json') {
-<<<<<<< HEAD
         console.log('Parsing JSON file:', file.name);
         console.log('JSON content preview:', content.substring(0, 500));
-=======
-        console.log('Parsing as JSON bookmarks');
->>>>>>> 7f6eea25a3445d5f61648153c33396cba2b2d79a
         this.bookmarks = this.parseJSONBookmarks(content);
         console.log('Extracted bookmarks:', this.bookmarks.length);
       } else {
         throw new Error('Unsupported file format. Please use HTML or JSON files.');
       }
 
-      console.log('Bookmarks parsed successfully:', this.bookmarks.length, 'bookmarks found');
       this.buildSearchIndex();
 
       this.updateFileInfo(file.name, this.bookmarks.length);
@@ -167,15 +123,9 @@ class BookmarkViewer {
       this.saveBookmarksToStorage(file.name);
       this.minimizeAccordion();
 
-      console.log('File upload completed successfully');
-
     } catch (error) {
       console.error('File upload error:', error);
-<<<<<<< HEAD
       this.showError(error.message);
-=======
-      this.showError(`Error loading file: ${error.message}`);
->>>>>>> 7f6eea25a3445d5f61648153c33396cba2b2d79a
     } finally {
       this.showLoading(false);
     }
@@ -183,190 +133,60 @@ class BookmarkViewer {
 
   readFile(file) {
     return new Promise((resolve, reject) => {
-      // Validate file input
-      if (!file) {
-        reject(new Error('No file provided'));
-        return;
-      }
-
-      if (!file.type && !file.name) {
-        reject(new Error('Invalid file object'));
-        return;
-      }
-
       const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        try {
-          const result = e.target.result;
-          if (typeof result !== 'string') {
-            reject(new Error('File content is not text-readable'));
-            return;
-          }
-          if (result.trim() === '') {
-            reject(new Error('File appears to be empty'));
-            return;
-          }
-          resolve(result);
-        } catch (error) {
-          reject(new Error(`Error processing file content: ${error.message}`));
-        }
-      };
-      
-      reader.onerror = (e) => {
-        reject(new Error(`Failed to read file: ${e.target.error?.message || 'Unknown error'}`));
-      };
-      
-      reader.onabort = () => {
-        reject(new Error('File reading was aborted'));
-      };
-      
-      try {
-        reader.readAsText(file);
-      } catch (error) {
-        reject(new Error(`Failed to start reading file: ${error.message}`));
-      }
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
     });
   }
 
   parseHTMLBookmarks(html) {
-    try {
-      if (!html || typeof html !== 'string') {
-        throw new Error('Invalid HTML content provided');
-      }
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const bookmarks = [];
+    const links = doc.querySelectorAll('a[href]');
 
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
+    links.forEach(link => {
+      const href = link.getAttribute('href');
+      const title = link.textContent.trim() || href;
       
-      // Check for parsing errors
-      const parserErrors = doc.querySelectorAll('parsererror');
-      if (parserErrors.length > 0) {
-        throw new Error('HTML parsing failed - invalid HTML format');
-      }
-
-      const bookmarks = [];
-      const links = doc.querySelectorAll('a[href]');
-
-      console.log(`Found ${links.length} links in HTML file`);
-
-      links.forEach((link, index) => {
-        try {
-          const href = link.getAttribute('href');
-          const title = link.textContent?.trim() || href;
-          
-          // Try to find folder context
-          let folder = 'Bookmarks';
-          let parent = link.parentElement;
-          let searchDepth = 0;
-          
-          while (parent && searchDepth < 10) {
-            const folderHeader = parent.querySelector('h3');
-            if (folderHeader && folderHeader.textContent) {
-              folder = folderHeader.textContent.trim();
-              break;
-            }
-            parent = parent.parentElement;
-            searchDepth++;
-          }
-
-          if (href && 
-              typeof href === 'string' && 
-              href.trim() !== '' && 
-              href !== '#' && 
-              !href.startsWith('javascript:')) {
-            bookmarks.push({ 
-              title: title || href, 
-              url: href.trim(), 
-              folder: folder 
-            });
-            this.folders.add(folder);
-          }
-        } catch (linkError) {
-          console.warn(`Error processing link at index ${index}:`, linkError);
+      // Try to find folder context
+      let folder = 'Bookmarks';
+      let parent = link.parentElement;
+      while (parent) {
+        const folderHeader = parent.querySelector('h3');
+        if (folderHeader) {
+          folder = folderHeader.textContent.trim();
+          break;
         }
-      });
-
-      if (bookmarks.length === 0) {
-        throw new Error('No valid bookmarks found in HTML file');
+        parent = parent.parentElement;
       }
 
-      console.log(`Successfully parsed ${bookmarks.length} bookmarks from HTML`);
-      return bookmarks;
-      
-    } catch (error) {
-      console.error('HTML parsing error:', error);
-      throw new Error(`Failed to parse HTML bookmarks: ${error.message}`);
-    }
+      if (href && href !== '#' && !href.startsWith('javascript:')) {
+        bookmarks.push({ title, url: href, folder });
+        this.folders.add(folder);
+      }
+    });
+
+    return bookmarks;
   }
 
   parseJSONBookmarks(jsonString) {
-    let data;
+    const data = JSON.parse(jsonString);
     const bookmarks = [];
 
-<<<<<<< HEAD
     const extractBookmarks = (item, folderPath = 'Bookmarks') => {
       // Handle Chrome bookmark format (with type field)
       if (item.type === 'url' && item.url) {
-=======
-    // Robust JSON parsing with better error handling
-    try {
-      data = JSON.parse(jsonString);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      throw new Error(`Invalid JSON format: ${parseError.message}`);
-    }
-
-    // Validate that data exists
-    if (!data || (typeof data !== 'object' && !Array.isArray(data))) {
-      throw new Error('Invalid bookmark data: Expected object or array');
-    }
-
-    const extractBookmarks = (item, folderPath = 'Bookmarks', depth = 0) => {
-      // Prevent infinite recursion
-      if (depth > 100) {
-        console.warn('Maximum recursion depth reached, skipping item');
-        return;
-      }
-
-      // Validate item exists and is an object
-      if (!item || typeof item !== 'object') {
-        return;
-      }
-
-      // Handle bookmark items (URLs)
-      if (item.type === 'url' || item.url) {
-        const url = item.url;
-        if (url && typeof url === 'string' && url.trim() !== '') {
-          bookmarks.push({
-            title: item.name || item.title || url,
-            url: url.trim(),
-            folder: folderPath || 'Bookmarks'
-          });
-          this.folders.add(folderPath || 'Bookmarks');
-        }
-        return;
-      }
-
-      // Handle folder items
-      if (item.type === 'folder' || item.children) {
-        const folderName = item.name || item.title || 'Untitled Folder';
-        const newFolderPath = folderPath === 'Bookmarks' ? folderName : `${folderPath} > ${folderName}`;
-        
-        if (Array.isArray(item.children)) {
-          item.children.forEach(child => extractBookmarks(child, newFolderPath, depth + 1));
-        }
-        return;
-      }
-
-      // Handle direct bookmark objects (without type field)
-      if (item.url && typeof item.url === 'string') {
->>>>>>> 7f6eea25a3445d5f61648153c33396cba2b2d79a
         bookmarks.push({
-          title: item.title || item.name || item.url,
-          url: item.url.trim(),
-          folder: folderPath || 'Bookmarks'
+          title: item.name || item.title || item.url,
+          url: item.url,
+          folder: folderPath
         });
-        this.folders.add(folderPath || 'Bookmarks');
+        this.folders.add(folderPath);
+      } else if (item.type === 'folder' && item.children) {
+        const newFolderPath = folderPath === 'Bookmarks' ? item.name : `${folderPath} > ${item.name}`;
+        item.children.forEach(child => extractBookmarks(child, newFolderPath));
       }
       // Handle simple bookmark objects (with url property)
       else if (item.url && !item.type) {
@@ -397,7 +217,6 @@ class BookmarkViewer {
       }
     };
 
-<<<<<<< HEAD
     // Handle Chrome bookmark export format
     if (data.roots) {
       Object.values(data.roots).forEach(root => {
@@ -413,32 +232,6 @@ class BookmarkViewer {
     // Handle single bookmark object or other formats
     else {
       extractBookmarks(data);
-=======
-    try {
-      // Handle Chrome/Edge bookmark export format
-      if (data.roots && typeof data.roots === 'object') {
-        Object.values(data.roots).forEach(root => {
-          if (root && typeof root === 'object' && Array.isArray(root.children)) {
-            root.children.forEach(item => extractBookmarks(item, root.name || 'Bookmarks'));
-          }
-        });
-      }
-      // Handle array format
-      else if (Array.isArray(data)) {
-        data.forEach(item => extractBookmarks(item));
-      }
-      // Handle single object format
-      else if (typeof data === 'object') {
-        extractBookmarks(data);
-      }
-    } catch (extractError) {
-      console.error('Error extracting bookmarks:', extractError);
-      throw new Error(`Failed to extract bookmarks: ${extractError.message}`);
-    }
-
-    if (bookmarks.length === 0) {
-      throw new Error('No valid bookmarks found in the file. Please check the format.');
->>>>>>> 7f6eea25a3445d5f61648153c33396cba2b2d79a
     }
 
     // Log for debugging
@@ -691,17 +484,5 @@ class BookmarkViewer {
 
 // Initialize the bookmark viewer when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM loaded, initializing BookmarkViewer...');
-  try {
-    window.bookmarkViewer = new BookmarkViewer();
-    console.log('BookmarkViewer created successfully');
-  } catch (error) {
-    console.error('Failed to create BookmarkViewer:', error);
-    // Show error in the UI if possible
-    const errorDiv = document.getElementById('error');
-    if (errorDiv) {
-      errorDiv.textContent = `Initialization failed: ${error.message}`;
-      errorDiv.style.display = 'block';
-    }
-  }
+  new BookmarkViewer();
 });
