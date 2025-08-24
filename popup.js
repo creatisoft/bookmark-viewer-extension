@@ -106,7 +106,10 @@ class BookmarkViewer {
       if (fileExtension === 'html') {
         this.bookmarks = this.parseHTMLBookmarks(content);
       } else if (fileExtension === 'json') {
+        console.log('Parsing JSON file:', file.name);
+        console.log('JSON content preview:', content.substring(0, 500));
         this.bookmarks = this.parseJSONBookmarks(content);
+        console.log('Extracted bookmarks:', this.bookmarks.length);
       } else {
         throw new Error('Unsupported file format. Please use HTML or JSON files.');
       }
@@ -121,6 +124,7 @@ class BookmarkViewer {
       this.minimizeAccordion();
 
     } catch (error) {
+      console.error('File upload error:', error);
       this.showError(error.message);
     } finally {
       this.showLoading(false);
@@ -172,6 +176,7 @@ class BookmarkViewer {
     const bookmarks = [];
 
     const extractBookmarks = (item, folderPath = 'Bookmarks') => {
+      // Handle Chrome bookmark format (with type field)
       if (item.type === 'url' && item.url) {
         bookmarks.push({
           title: item.name || item.title || item.url,
@@ -183,20 +188,54 @@ class BookmarkViewer {
         const newFolderPath = folderPath === 'Bookmarks' ? item.name : `${folderPath} > ${item.name}`;
         item.children.forEach(child => extractBookmarks(child, newFolderPath));
       }
+      // Handle simple bookmark objects (with url property)
+      else if (item.url && !item.type) {
+        bookmarks.push({
+          title: item.title || item.name || item.url,
+          url: item.url,
+          folder: item.folder || folderPath
+        });
+        this.folders.add(item.folder || folderPath);
+      }
+      // Handle objects with children but no type (folder-like)
+      else if (item.children && Array.isArray(item.children)) {
+        const newFolderPath = item.name || item.title || folderPath;
+        if (newFolderPath !== folderPath) {
+          this.folders.add(newFolderPath);
+        }
+        item.children.forEach(child => extractBookmarks(child, newFolderPath));
+      }
+      // Handle nested objects recursively
+      else if (typeof item === 'object' && item !== null) {
+        Object.values(item).forEach(value => {
+          if (Array.isArray(value)) {
+            value.forEach(subItem => extractBookmarks(subItem, folderPath));
+          } else if (typeof value === 'object' && value !== null) {
+            extractBookmarks(value, folderPath);
+          }
+        });
+      }
     };
 
+    // Handle Chrome bookmark export format
     if (data.roots) {
       Object.values(data.roots).forEach(root => {
         if (root.children) {
           root.children.forEach(item => extractBookmarks(item, root.name || 'Bookmarks'));
         }
       });
-    } else if (Array.isArray(data)) {
+    }
+    // Handle simple array of bookmarks
+    else if (Array.isArray(data)) {
       data.forEach(item => extractBookmarks(item));
-    } else {
+    }
+    // Handle single bookmark object or other formats
+    else {
       extractBookmarks(data);
     }
 
+    // Log for debugging
+    console.log(`Parsed ${bookmarks.length} bookmarks from JSON`);
     return bookmarks;
   }
 
