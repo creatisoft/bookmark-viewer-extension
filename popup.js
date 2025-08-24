@@ -145,8 +145,14 @@ class BookmarkViewer {
         console.log('Parsing as HTML bookmarks');
         this.bookmarks = this.parseHTMLBookmarks(content);
       } else if (fileExtension === 'json') {
+<<<<<<< HEAD
         console.log('Parsing as JSON bookmarks');
+=======
+        console.log('Parsing JSON file:', file.name);
+        console.log('JSON content preview:', content.substring(0, 500));
+>>>>>>> 4677a59 (Update version to 1.1.5 and enhance JSON parsing with improved error handling and logging)
         this.bookmarks = this.parseJSONBookmarks(content);
+        console.log('Extracted bookmarks:', this.bookmarks.length);
       } else {
         throw new Error('Unsupported file format. Please use HTML or JSON files.');
       }
@@ -165,7 +171,11 @@ class BookmarkViewer {
 
     } catch (error) {
       console.error('File upload error:', error);
+<<<<<<< HEAD
       this.showError(`Error loading file: ${error.message}`);
+=======
+      this.showError(error.message);
+>>>>>>> 4677a59 (Update version to 1.1.5 and enhance JSON parsing with improved error handling and logging)
     } finally {
       this.showLoading(false);
     }
@@ -293,6 +303,7 @@ class BookmarkViewer {
     let data;
     const bookmarks = [];
 
+<<<<<<< HEAD
     // Robust JSON parsing with better error handling
     try {
       data = JSON.parse(jsonString);
@@ -345,6 +356,11 @@ class BookmarkViewer {
 
       // Handle direct bookmark objects (without type field)
       if (item.url && typeof item.url === 'string') {
+=======
+    const extractBookmarks = (item, folderPath = 'Bookmarks') => {
+      // Handle Chrome bookmark format (with type field)
+      if (item.type === 'url' && item.url) {
+>>>>>>> 4677a59 (Update version to 1.1.5 and enhance JSON parsing with improved error handling and logging)
         bookmarks.push({
           title: item.title || item.name || item.url,
           url: item.url.trim(),
@@ -352,8 +368,36 @@ class BookmarkViewer {
         });
         this.folders.add(folderPath || 'Bookmarks');
       }
+      // Handle simple bookmark objects (with url property)
+      else if (item.url && !item.type) {
+        bookmarks.push({
+          title: item.title || item.name || item.url,
+          url: item.url,
+          folder: item.folder || folderPath
+        });
+        this.folders.add(item.folder || folderPath);
+      }
+      // Handle objects with children but no type (folder-like)
+      else if (item.children && Array.isArray(item.children)) {
+        const newFolderPath = item.name || item.title || folderPath;
+        if (newFolderPath !== folderPath) {
+          this.folders.add(newFolderPath);
+        }
+        item.children.forEach(child => extractBookmarks(child, newFolderPath));
+      }
+      // Handle nested objects recursively
+      else if (typeof item === 'object' && item !== null) {
+        Object.values(item).forEach(value => {
+          if (Array.isArray(value)) {
+            value.forEach(subItem => extractBookmarks(subItem, folderPath));
+          } else if (typeof value === 'object' && value !== null) {
+            extractBookmarks(value, folderPath);
+          }
+        });
+      }
     };
 
+<<<<<<< HEAD
     try {
       // Handle Chrome/Edge bookmark export format
       if (data.roots && typeof data.roots === 'object') {
@@ -378,8 +422,27 @@ class BookmarkViewer {
 
     if (bookmarks.length === 0) {
       throw new Error('No valid bookmarks found in the file. Please check the format.');
+=======
+    // Handle Chrome bookmark export format
+    if (data.roots) {
+      Object.values(data.roots).forEach(root => {
+        if (root.children) {
+          root.children.forEach(item => extractBookmarks(item, root.name || 'Bookmarks'));
+        }
+      });
+    }
+    // Handle simple array of bookmarks
+    else if (Array.isArray(data)) {
+      data.forEach(item => extractBookmarks(item));
+    }
+    // Handle single bookmark object or other formats
+    else {
+      extractBookmarks(data);
+>>>>>>> 4677a59 (Update version to 1.1.5 and enhance JSON parsing with improved error handling and logging)
     }
 
+    // Log for debugging
+    console.log(`Parsed ${bookmarks.length} bookmarks from JSON`);
     return bookmarks;
   }
 

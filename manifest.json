@@ -1,7 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Bookmark Viewer",
+<<<<<<< HEAD
   "version": "1.1.2",
+=======
+  "version": "1.1.5",
+>>>>>>> 4677a59 (Update version to 1.1.5 and enhance JSON parsing with improved error handling and logging)
   "description": "A Browser extension for viewing bookmarks",
   "action": {
     "default_popup": "popup.html",
