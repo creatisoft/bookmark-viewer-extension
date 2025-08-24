@@ -37,6 +37,12 @@ Bookmark Viewer is a browser extension that allows you to view and manage your b
 - Export your bookmarks to a file with a single click.
 - Manage bookmarks with options to clear or reload them.
 
+## Known issues
+
+On Linux you will need to load bookmarks first, before uploading a file to
+populate the list. 
+
+
 ## Permissions
 
 This extension requires the following permissions:
