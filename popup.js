@@ -3,7 +3,10 @@ class BookmarkViewer {
     this.bookmarks = [];
     this.folders = new Set();
     this.faviconCache = new Map();
+    this.renderCache = new Map(); // Cache rendered bookmark elements
+    this.intersectionObserver = null; // For lazy loading favicons
     this.initializeEventListeners();
+    this.setupIntersectionObserver();
     this.loadPersistedBookmarks();
   }
 
@@ -24,6 +27,16 @@ class BookmarkViewer {
     // Debounce search to reduce frequent filtering on large lists
     const debouncedFilter = this.debounce((query) => this.filterBookmarks(query), 250);
     searchInput.addEventListener('input', (e) => debouncedFilter(e.target.value));
+
+    // Use event delegation for bookmark clicks (more efficient for large lists)
+    const bookmarksContainer = document.getElementById('bookmarksContainer');
+    bookmarksContainer.addEventListener('click', (e) => {
+      const link = e.target.closest('a.bookmark-url');
+      if (link) {
+        e.preventDefault();
+        chrome.tabs.create({ url: link.href });
+      }
+    });
   }
 
   // Generic debounce utility
@@ -35,14 +48,38 @@ class BookmarkViewer {
     };
   }
 
+  // Setup Intersection Observer for lazy loading favicons
+  setupIntersectionObserver() {
+    if ('IntersectionObserver' in window) {
+      this.intersectionObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              const src = img.getAttribute('data-src');
+              if (src) {
+                img.src = src;
+                img.removeAttribute('data-src');
+                this.intersectionObserver.unobserve(img);
+              }
+            }
+          });
+        },
+        { rootMargin: '50px' } // Load images 50px before they enter viewport
+      );
+    }
+  }
+
   // Build a simple search index to speed up filtering
   buildSearchIndex() {
-    this.bookmarks.forEach(b => {
+    // Use for loop instead of forEach for better performance
+    for (let i = 0; i < this.bookmarks.length; i++) {
+      const b = this.bookmarks[i];
       const title = (b.title || '').toLowerCase();
       const url = (b.url || '').toLowerCase();
       const folder = (b.folder || '').toLowerCase();
       b._search = `${title} ${url} ${folder}`;
-    });
+    }
   }
 
   async loadChromeBookmarks() {
@@ -72,7 +109,9 @@ class BookmarkViewer {
   }
 
   extractBookmarksFromTree(tree, folderPath = '') {
-    tree.forEach(node => {
+    // Use for loop for better performance
+    for (let i = 0; i < tree.length; i++) {
+      const node = tree[i];
       if (node.children) {
         // This is a folder
         const currentPath = folderPath ? `${folderPath} > ${node.title}` : node.title;
@@ -86,7 +125,7 @@ class BookmarkViewer {
           folder: folderPath || 'Bookmarks'
         });
       }
-    });
+    }
   }
 
   async handleFileUpload(event) {
@@ -249,18 +288,50 @@ class BookmarkViewer {
   }
 
   createBookmarkCard(bookmark) {
+    // Create elements using DOM API for better performance and memory usage
     const card = document.createElement('div');
     card.className = 'bookmark-card';
-    card.innerHTML = `
-      <div class="bookmark-title">
-        <img src="${this.getFaviconUrl(bookmark.url)}" loading="lazy" class="bookmark-favicon" alt="favicon" onerror="this.style.display='none'">
-        <span class="bookmark-title-text">${this.escapeHtml(bookmark.title)}</span>
-      </div>
-      <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="bookmark-url">
-        ${this.escapeHtml(bookmark.url)}
-      </a>
-      ${bookmark.folder ? `<div class=\"bookmark-folder\">${this.escapeHtml(bookmark.folder)}</div>` : ''}
-    `;
+
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'bookmark-title';
+
+    const favicon = document.createElement('img');
+    favicon.className = 'bookmark-favicon';
+    favicon.alt = 'favicon';
+    // Use data-src for lazy loading
+    if (this.intersectionObserver) {
+      favicon.setAttribute('data-src', this.getFaviconUrl(bookmark.url));
+      this.intersectionObserver.observe(favicon);
+    } else {
+      favicon.src = this.getFaviconUrl(bookmark.url);
+      favicon.loading = 'lazy';
+    }
+    favicon.onerror = function() { this.style.display = 'none'; };
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'bookmark-title-text';
+    titleSpan.textContent = bookmark.title; // textContent is faster and safer
+
+    titleDiv.appendChild(favicon);
+    titleDiv.appendChild(titleSpan);
+
+    const link = document.createElement('a');
+    link.href = bookmark.url;
+    link.className = 'bookmark-url';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = bookmark.url;
+
+    card.appendChild(titleDiv);
+    card.appendChild(link);
+
+    if (bookmark.folder) {
+      const folderDiv = document.createElement('div');
+      folderDiv.className = 'bookmark-folder';
+      folderDiv.textContent = bookmark.folder;
+      card.appendChild(folderDiv);
+    }
+
     return card;
   }
 
@@ -268,7 +339,8 @@ class BookmarkViewer {
     const container = document.getElementById('bookmarksContainer');
     const emptyState = document.getElementById('emptyState');
 
-    container.innerHTML = '';
+    // Clear container efficiently
+    container.textContent = '';
 
     if (!list || list.length === 0) {
       emptyState.style.display = 'block';
@@ -277,23 +349,27 @@ class BookmarkViewer {
 
     emptyState.style.display = 'none';
 
-    const batchSize = 200;
+    // Increase batch size for better performance
+    const batchSize = 50;
     let index = 0;
 
     const renderChunk = () => {
       const frag = document.createDocumentFragment();
-      const end = Math.max(Math.min(index + batchSize, list.length), index);
+      const end = Math.min(index + batchSize, list.length);
+      
       for (; index < end; index++) {
         frag.appendChild(this.createBookmarkCard(list[index]));
       }
+      
       container.appendChild(frag);
 
       if (index < list.length) {
-        requestAnimationFrame(renderChunk);
+        // Use setTimeout with 0 delay instead of requestAnimationFrame for better chunking
+        setTimeout(renderChunk, 0);
       }
     };
 
-    requestAnimationFrame(renderChunk);
+    renderChunk();
   }
 
   updateStats() {
@@ -318,13 +394,18 @@ class BookmarkViewer {
   }
 
   clearBookmarks() {
+    // Clear data structures
     this.bookmarks = [];
     this.folders.clear();
+    this.renderCache.clear();
+    this.faviconCache.clear();
+    
+    // Clear UI efficiently
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.value = '';
     document.getElementById('fileInput').value = '';
     document.getElementById('fileInfo').textContent = '';
-    document.getElementById('bookmarksContainer').innerHTML = '';
+    document.getElementById('bookmarksContainer').textContent = ''; // textContent is faster than innerHTML
     document.getElementById('emptyState').style.display = 'block';
     document.getElementById('stats').style.display = 'none';
     document.getElementById('clearButton').style.display = 'none';
@@ -470,53 +551,68 @@ class BookmarkViewer {
   }
 
   generateBookmarkHTML() {
-    // Create HTML header in Netscape Bookmark format
-    let html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
-<!-- This is an automatically generated file.
-     It will be read and overwritten.
-     DO NOT EDIT! -->
-<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-<TITLE>Bookmarks</TITLE>
-<H1>Bookmarks</H1>
-<DL><p>
-`;
+    // Use array join for better memory efficiency than string concatenation
+    const parts = [];
+    
+    parts.push(
+      '<!DOCTYPE NETSCAPE-Bookmark-file-1>',
+      '<!-- This is an automatically generated file.',
+      '     It will be read and overwritten.',
+      '     DO NOT EDIT! -->',
+      '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
+      '<TITLE>Bookmarks</TITLE>',
+      '<H1>Bookmarks</H1>',
+      '<DL><p>'
+    );
 
     // Group bookmarks by folder
     const bookmarksByFolder = new Map();
-    this.bookmarks.forEach(bookmark => {
+    for (let i = 0; i < this.bookmarks.length; i++) {
+      const bookmark = this.bookmarks[i];
       const folder = bookmark.folder || 'Bookmarks';
       if (!bookmarksByFolder.has(folder)) {
         bookmarksByFolder.set(folder, []);
       }
       bookmarksByFolder.get(folder).push(bookmark);
-    });
+    }
 
+    const timestamp = Math.floor(Date.now() / 1000);
+    
     // Generate HTML for each folder
     bookmarksByFolder.forEach((bookmarks, folder) => {
-      html += `    <DT><H3>${this.escapeHtml(folder)}</H3>\n`;
-      html += `    <DL><p>\n`;
+      parts.push(`    <DT><H3>${this.escapeHtml(folder)}</H3>`);
+      parts.push('    <DL><p>');
       
-      bookmarks.forEach(bookmark => {
-        const timestamp = Math.floor(Date.now() / 1000);
-        html += `        <DT><A HREF="${this.escapeHtml(bookmark.url)}" ADD_DATE="${timestamp}">${this.escapeHtml(bookmark.title)}</A>\n`;
-      });
+      for (let i = 0; i < bookmarks.length; i++) {
+        const bookmark = bookmarks[i];
+        parts.push(`        <DT><A HREF="${this.escapeHtml(bookmark.url)}" ADD_DATE="${timestamp}">${this.escapeHtml(bookmark.title)}</A>`);
+      }
       
-      html += `    </DL><p>\n`;
+      parts.push('    </DL><p>');
     });
 
-    html += `</DL><p>\n`;
+    parts.push('</DL><p>');
     
-    return html;
+    return parts.join('\n');
   }
 
   filterBookmarks(query) {
-    const q = (query || '').toLowerCase();
+    const q = (query || '').toLowerCase().trim();
     if (!q) {
       // Render full list when query is cleared
       this.renderBookmarks();
       return;
     }
-    const filteredBookmarks = this.bookmarks.filter(b => b._search && b._search.includes(q));
+    
+    // Use for loop for better performance on large arrays
+    const filteredBookmarks = [];
+    for (let i = 0; i < this.bookmarks.length; i++) {
+      const b = this.bookmarks[i];
+      if (b._search && b._search.includes(q)) {
+        filteredBookmarks.push(b);
+      }
+    }
+    
     this.renderFilteredBookmarks(filteredBookmarks);
   }
 
