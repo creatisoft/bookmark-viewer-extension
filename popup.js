@@ -456,16 +456,57 @@ class BookmarkViewer {
       return;
     }
 
-    const dataStr = JSON.stringify(this.bookmarks, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
+    // Generate HTML in Netscape Bookmark format for better compatibility
+    const html = this.generateBookmarkHTML();
+    const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'bookmarks.json';
+    a.download = 'bookmarks.html';
     a.click();
 
     URL.revokeObjectURL(url);
+  }
+
+  generateBookmarkHTML() {
+    // Create HTML header in Netscape Bookmark format
+    let html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file.
+     It will be read and overwritten.
+     DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+`;
+
+    // Group bookmarks by folder
+    const bookmarksByFolder = new Map();
+    this.bookmarks.forEach(bookmark => {
+      const folder = bookmark.folder || 'Bookmarks';
+      if (!bookmarksByFolder.has(folder)) {
+        bookmarksByFolder.set(folder, []);
+      }
+      bookmarksByFolder.get(folder).push(bookmark);
+    });
+
+    // Generate HTML for each folder
+    bookmarksByFolder.forEach((bookmarks, folder) => {
+      html += `    <DT><H3>${this.escapeHtml(folder)}</H3>\n`;
+      html += `    <DL><p>\n`;
+      
+      bookmarks.forEach(bookmark => {
+        const timestamp = Math.floor(Date.now() / 1000);
+        html += `        <DT><A HREF="${this.escapeHtml(bookmark.url)}" ADD_DATE="${timestamp}">${this.escapeHtml(bookmark.title)}</A>\n`;
+      });
+      
+      html += `    </DL><p>\n`;
+    });
+
+    html += `</DL><p>\n`;
+    
+    return html;
   }
 
   filterBookmarks(query) {
