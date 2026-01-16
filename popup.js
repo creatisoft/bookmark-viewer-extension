@@ -5,9 +5,32 @@ class BookmarkViewer {
     this.faviconCache = new Map();
     this.renderCache = new Map(); // Cache rendered bookmark elements
     this.intersectionObserver = null; // For lazy loading favicons
+    this.initializeTheme();
     this.initializeEventListeners();
     this.setupIntersectionObserver();
     this.loadPersistedBookmarks();
+  }
+
+  initializeTheme() {
+    // Load saved theme or default to light
+    const savedTheme = localStorage.getItem('bookmarkViewer_theme') || 'light';
+    this.setTheme(savedTheme);
+  }
+
+  setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+      themeToggle.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    }
+    localStorage.setItem('bookmarkViewer_theme', theme);
+  }
+
+  toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    this.setTheme(newTheme);
   }
 
   initializeEventListeners() {
@@ -17,12 +40,14 @@ class BookmarkViewer {
     const uploadSectionHeader = document.getElementById('uploadSectionHeader');
     const exportButton = document.getElementById('exportButton');
     const searchInput = document.getElementById('searchInput');
+    const themeToggle = document.getElementById('themeToggle');
 
     loadChromeBookmarks.addEventListener('click', () => this.loadChromeBookmarks());
     fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
     clearButton.addEventListener('click', () => this.clearBookmarks());
     uploadSectionHeader.addEventListener('click', () => this.toggleAccordion());
     exportButton.addEventListener('click', () => this.exportBookmarks());
+    themeToggle.addEventListener('click', () => this.toggleTheme());
 
     // Debounce search to reduce frequent filtering on large lists
     const debouncedFilter = this.debounce((query) => this.filterBookmarks(query), 250);
