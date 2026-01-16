@@ -7,6 +7,7 @@ Bookmark Viewer is a browser extension that allows you to view and manage your b
 
 <img width="444" height="602" alt="Screenshot 2025-08-08 at 11 38 32 AM" src="https://github.com/user-attachments/assets/bcc316c5-b352-40e0-a211-6072ae5309f8" />
 
+<img width="453" height="608" alt="Screenshot 2026-01-15 at 4 17 24 PM" src="https://github.com/user-attachments/assets/1f7b19bf-ec97-418b-b32c-8e3d513292d1" />
 
 
 ## Installation Instructions
