@@ -5,68 +5,68 @@
   <style>
     :root {
       /* Light theme (default) */
-      --bg-gradient: linear-gradient(135deg, #4A90E2 0%, #357ABD 50%, #2E5F8F 100%);
-      --card-bg: rgba(255, 255, 255, 0.98);
-      --card-bg-hover: rgba(255, 255, 255, 1);
-      --card-border: rgba(255, 255, 255, 0.4);
-      --card-shadow: 0 6px 24px rgba(0, 0, 0, 0.10);
-      --card-shadow-hover: 0 12px 36px rgba(0, 0, 0, 0.15);
+      --bg: #4A90E2;
+      --card-bg: #ffffff;
+      --card-bg-hover: #f7f9fc;
+      --card-border: rgba(0, 0, 0, 0.08);
+      --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.12);
       --text-primary: #2d3748;
       --text-secondary: #546E7A;
       --text-muted: #90A4AE;
       --link-color: #4A90E2;
       --link-hover: #357ABD;
-      --input-bg: rgba(255, 255, 255, 0.98);
-      --input-border: rgba(255, 255, 255, 0.4);
-      --input-focus-shadow: 0 6px 24px rgba(74, 144, 226, 0.25);
-      --stat-bg: rgba(255, 255, 255, 0.95);
+      --input-bg: #ffffff;
+      --input-border: rgba(0, 0, 0, 0.15);
+      --input-focus-border: #4A90E2;
+      --stat-bg: #ffffff;
       --stat-number: #2E5F8F;
-      --folder-bg: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+      --folder-bg: #E3F2FD;
       --folder-text: #0D47A1;
       --folder-border: rgba(13, 71, 161, 0.1);
-      --status-bg: linear-gradient(135deg, #C8E6C9 0%, #A5D6A7 100%);
+      --status-bg: #E8F5E9;
       --status-text: #1B5E20;
-      --error-bg: linear-gradient(135deg, #FFCDD2 0%, #F8BBD9 100%);
+      --error-bg: #FFEBEE;
       --error-text: #B71C1C;
       --scrollbar-track: rgba(255, 255, 255, 0.15);
       --scrollbar-thumb: rgba(255, 255, 255, 0.4);
       --scrollbar-thumb-hover: rgba(255, 255, 255, 0.6);
       --empty-text: rgba(255, 255, 255, 0.8);
       --empty-heading: rgba(255, 255, 255, 0.9);
-      --header-hover-bg: rgba(74, 144, 226, 0.08);
+      --header-hover-bg: rgba(0, 0, 0, 0.03);
     }
 
     [data-theme="dark"] {
-      /* Dark theme - easy on the eyes */
-      --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-      --card-bg: rgba(30, 32, 44, 0.95);
-      --card-bg-hover: rgba(38, 41, 56, 1);
+      /* Dark theme */
+      --bg: #1a1a2e;
+      --card-bg: #1e202c;
+      --card-bg-hover: #262938;
       --card-border: rgba(255, 255, 255, 0.08);
-      --card-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-      --card-shadow-hover: 0 12px 36px rgba(0, 0, 0, 0.4);
+      --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
       --text-primary: #e2e8f0;
       --text-secondary: #a0aec0;
       --text-muted: #718096;
       --link-color: #63b3ed;
       --link-hover: #90cdf4;
-      --input-bg: rgba(30, 32, 44, 0.95);
+      --input-bg: #1e202c;
       --input-border: rgba(255, 255, 255, 0.1);
-      --input-focus-shadow: 0 6px 24px rgba(99, 179, 237, 0.2);
-      --stat-bg: rgba(30, 32, 44, 0.95);
+      --input-focus-border: #63b3ed;
+      --stat-bg: #1e202c;
       --stat-number: #63b3ed;
-      --folder-bg: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+      --folder-bg: #2d3748;
       --folder-text: #90cdf4;
       --folder-border: rgba(144, 205, 244, 0.15);
-      --status-bg: linear-gradient(135deg, #276749 0%, #22543d 100%);
+      --status-bg: #1c3a2a;
       --status-text: #9ae6b4;
-      --error-bg: linear-gradient(135deg, #742a2a 0%, #63171b 100%);
+      --error-bg: #3d1515;
       --error-text: #feb2b2;
       --scrollbar-track: rgba(0, 0, 0, 0.2);
       --scrollbar-thumb: rgba(255, 255, 255, 0.15);
       --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
       --empty-text: rgba(255, 255, 255, 0.6);
       --empty-heading: rgba(255, 255, 255, 0.8);
-      --header-hover-bg: rgba(99, 179, 237, 0.1);
+      --header-hover-bg: rgba(255, 255, 255, 0.04);
     }
 
     body {
@@ -75,11 +75,8 @@
       margin: 0;
       padding: 24px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: var(--bg-gradient);
+      background: var(--bg);
       overflow-y: auto;
-      border-radius: 24px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 
-                  0 0 0 1px rgba(255, 255, 255, 0.1);
       transition: background 0.3s ease;
     }
     
@@ -92,32 +89,29 @@
       font-size: 20px;
       font-weight: 700;
       margin-bottom: 24px;
-      text-shadow: 0 2px 20px rgba(0,0,0,0.2);
       letter-spacing: -0.5px;
       text-align: center;
     }
     
     .upload-section {
       background: var(--card-bg);
-      backdrop-filter: blur(25px);
-      border-radius: 24px;
-      box-shadow: var(--card-shadow), 
-                  0 0 0 1px var(--card-border);
-      margin-bottom: 24px;
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 20px;
       text-align: center;
       border: 1px solid var(--card-border);
-      transition: background 0.3s ease, box-shadow 0.3s ease;
+      transition: background 0.3s ease;
     }
     
     .upload-section-header {
-      padding: 20px 24px;
+      padding: 14px 18px;
       cursor: pointer;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      border-bottom: 1px solid var(--card-border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: all 0.3s ease;
-      border-radius: 24px 24px 0 0;
+      transition: background 0.2s ease;
+      border-radius: 12px 12px 0 0;
     }
     
     .upload-section-header:hover {
@@ -125,16 +119,15 @@
     }
     
     .upload-section-title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--text-secondary);
-      letter-spacing: -0.2px;
     }
     
     .accordion-toggle {
-      font-size: 14px;
-      color: #a0aec0;
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 12px;
+      color: var(--text-muted);
+      transition: transform 0.25s ease;
       font-weight: 500;
     }
     
@@ -143,35 +136,35 @@
     }
     
     .upload-section-content {
-      padding: 24px;
-      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                  opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                  padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 18px;
+      transition: max-height 0.35s ease,
+                  opacity 0.35s ease,
+                  padding 0.35s ease;
       overflow: hidden;
     }
     
     .upload-section-content.collapsed {
       max-height: 0;
       opacity: 0;
-      padding: 0 24px;
+      padding: 0 18px;
     }
     
     .upload-section.has-bookmarks .upload-section-content {
       max-height: 0;
       opacity: 0;
-      padding: 0 24px;
+      padding: 0 18px;
     }
     
     .upload-section.has-bookmarks .upload-section-content.expanded {
       max-height: 500px;
       opacity: 1;
-      padding: 24px;
+      padding: 18px;
     }
     
     .file-input-wrapper {
       position: relative;
       display: inline-block;
-      margin-bottom: 12px;
+      margin-bottom: 6px;
     }
     
     .file-input {
@@ -183,73 +176,61 @@
     }
     
     .file-input-button {
-      background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
+      background: #4A90E2;
       color: white;
-      padding: 14px 28px;
+      padding: 10px 22px;
       border: none;
-      border-radius: 20px;
+      border-radius: 8px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      margin: 8px;
-      box-shadow: 0 6px 24px rgba(74, 144, 226, 0.35);
-      letter-spacing: -0.2px;
+      transition: filter 0.2s ease;
+      margin: 5px;
     }
     
     .file-input-button:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 30px rgba(74, 144, 226, 0.45);
-      background: linear-gradient(135deg, #357ABD 0%, #2E5F8F 100%);
+      filter: brightness(0.9);
     }
     
     .export-button {
-      background: linear-gradient(135deg, #52C784 0%, #44A577 100%);
+      background: #52C784;
       color: white;
-      padding: 14px 28px;
+      padding: 10px 22px;
       border: none;
-      border-radius: 20px;
+      border-radius: 8px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      margin: 8px;
-      box-shadow: 0 6px 24px rgba(82, 199, 132, 0.35);
-      letter-spacing: -0.2px;
+      transition: filter 0.2s ease;
+      margin: 5px;
     }
 
     .export-button:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 30px rgba(82, 199, 132, 0.45);
-      background: linear-gradient(135deg, #44A577 0%, #3B926A 100%);
+      filter: brightness(0.9);
     }
     
     .clear-button {
-      background: linear-gradient(135deg, #FF7B7B 0%, #E85A5A 100%);
+      background: #FF7B7B;
       color: white;
-      padding: 12px 24px;
+      padding: 10px 20px;
       border: none;
-      border-radius: 18px;
+      border-radius: 8px;
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      margin: 8px;
-      box-shadow: 0 6px 24px rgba(255, 123, 123, 0.35);
-      letter-spacing: -0.1px;
+      transition: filter 0.2s ease;
+      margin: 5px;
     }
     
     .clear-button:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 30px rgba(255, 123, 123, 0.45);
-      background: linear-gradient(135deg, #E85A5A 0%, #D54545 100%);
+      filter: brightness(0.9);
     }
     
     .status {
-      margin-top: 16px;
-      padding: 14px 18px;
+      margin-top: 12px;
+      padding: 10px 14px;
       background: var(--status-bg);
-      border-radius: 18px;
+      border-radius: 8px;
       font-size: 12px;
       color: var(--status-text);
       font-weight: 500;
@@ -258,14 +239,13 @@
     }
     
     .file-info {
-      margin-top: 16px;
+      margin-top: 12px;
       color: var(--text-secondary);
       font-size: 12px;
       font-weight: 500;
       background: var(--card-bg);
-      backdrop-filter: blur(15px);
-      padding: 10px 16px;
-      border-radius: 16px;
+      padding: 8px 14px;
+      border-radius: 8px;
       border: 1px solid var(--card-border);
       transition: background 0.3s ease, color 0.3s ease;
     }
@@ -273,9 +253,9 @@
     .error {
       background: var(--error-bg);
       color: var(--error-text);
-      padding: 14px 18px;
-      border-radius: 18px;
-      margin-top: 16px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-top: 12px;
       border: 1px solid rgba(183, 28, 28, 0.1);
       font-size: 12px;
       font-weight: 500;
@@ -285,21 +265,20 @@
     .stats {
       display: flex;
       justify-content: center;
-      gap: 16px;
-      margin-top: 20px;
+      gap: 12px;
+      margin-top: 16px;
       flex-wrap: wrap;
     }
     
     .stat-item {
       background: var(--stat-bg);
-      backdrop-filter: blur(15px);
-      padding: 16px 20px;
-      border-radius: 20px;
+      padding: 12px 16px;
+      border-radius: 8px;
       text-align: center;
       flex: 1;
-      min-width: 85px;
+      min-width: 80px;
       border: 1px solid var(--card-border);
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--card-shadow);
       transition: background 0.3s ease;
     }
     
@@ -314,7 +293,7 @@
     .stat-label {
       color: var(--text-secondary);
       font-size: 11px;
-      margin-top: 6px;
+      margin-top: 4px;
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -323,22 +302,22 @@
     .bookmarks-container {
       max-height: 400px;
       overflow-y: auto;
-      margin-top: 20px;
+      margin-top: 16px;
       padding-right: 6px;
     }
     
     .bookmarks-container::-webkit-scrollbar {
-      width: 5px;
+      width: 4px;
     }
     
     .bookmarks-container::-webkit-scrollbar-track {
       background: var(--scrollbar-track);
-      border-radius: 3px;
+      border-radius: 2px;
     }
     
     .bookmarks-container::-webkit-scrollbar-thumb {
       background: var(--scrollbar-thumb);
-      border-radius: 3px;
+      border-radius: 2px;
     }
     
     .bookmarks-container::-webkit-scrollbar-thumb:hover {
@@ -347,20 +326,18 @@
     
     .bookmark-card {
       background: var(--card-bg);
-      backdrop-filter: blur(25px);
-      border-radius: 22px;
-      padding: 18px;
-      margin-bottom: 14px;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
       box-shadow: var(--card-shadow);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: box-shadow 0.2s ease, background 0.2s ease;
       border: 1px solid var(--card-border);
       text-align: left;
       content-visibility: auto;
-      contain-intrinsic-size: 0 100px;
+      contain-intrinsic-size: 0 90px;
     }
     
     .bookmark-card:hover {
-      transform: translateY(-3px);
       box-shadow: var(--card-shadow-hover);
       background: var(--card-bg-hover);
     }
@@ -369,20 +346,18 @@
       font-size: 13px;
       font-weight: 600;
       color: var(--text-primary);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       line-height: 1.4;
       display: flex;
       align-items: center;
       gap: 8px;
-      letter-spacing: -0.2px;
     }
     
     .bookmark-favicon {
       width: 16px;
       height: 16px;
       flex-shrink: 0;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      border-radius: 4px;
     }
     
     .bookmark-title-text {
@@ -399,7 +374,7 @@
       text-decoration: none;
       font-size: 11px;
       word-break: break-all;
-      transition: all 0.3s ease;
+      transition: color 0.2s ease;
       display: block;
       margin-bottom: 8px;
       font-weight: 500;
@@ -414,8 +389,8 @@
     .bookmark-folder {
       background: var(--folder-bg);
       color: var(--folder-text);
-      padding: 5px 12px;
-      border-radius: 16px;
+      padding: 3px 10px;
+      border-radius: 6px;
       font-size: 10px;
       display: inline-block;
       font-weight: 600;
@@ -442,7 +417,6 @@
       font-weight: 600;
       margin-bottom: 8px;
       color: var(--empty-heading);
-      letter-spacing: -0.3px;
     }
     
     .empty-state p {
@@ -460,34 +434,30 @@
     }
     
     .chrome-bookmarks-section {
-      margin-top: 12px;
+      margin-top: 8px;
     }
     
     .chrome-bookmarks-button {
-      background: linear-gradient(135deg, #4A90E2 0%, #2E5F8F 100%);
+      background: #4A90E2;
       color: white;
-      padding: 14px 28px;
+      padding: 10px 22px;
       border: none;
-      border-radius: 20px;
+      border-radius: 8px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      margin: 8px;
-      width: calc(100% - 16px);
-      box-shadow: 0 6px 24px rgba(74, 144, 226, 0.35);
-      letter-spacing: -0.2px;
+      transition: filter 0.2s ease;
+      margin: 5px;
+      width: calc(100% - 10px);
     }
     
     .chrome-bookmarks-button:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 30px rgba(74, 144, 226, 0.45);
-      background: linear-gradient(135deg, #357ABD 0%, #1E4A73 100%);
+      filter: brightness(0.9);
     }
     
     #searchContainer {
-      margin-top: 20px;
-      margin-bottom: 12px;
+      margin-top: 16px;
+      margin-bottom: 10px;
       display: flex;
       justify-content: center;
     }
@@ -495,17 +465,14 @@
     #searchInput {
       width: calc(100% - 32px);
       max-width: 340px;
-      padding: 16px 20px;
+      padding: 12px 16px;
       border: 1px solid var(--input-border);
-      border-radius: 22px;
+      border-radius: 8px;
       font-size: 14px;
       color: var(--text-primary);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
       background: var(--input-bg);
-      backdrop-filter: blur(25px);
       font-weight: 500;
-      letter-spacing: -0.2px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
     
     #searchInput::placeholder {
@@ -514,11 +481,9 @@
     }
     
     #searchInput:focus {
-      border-color: var(--link-color);
+      border-color: var(--input-focus-border);
       outline: none;
-      background: var(--card-bg-hover);
-      box-shadow: var(--input-focus-shadow);
-      transform: translateY(-2px);
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
     }
 
     /* Theme toggle button */
@@ -526,16 +491,15 @@
       position: fixed;
       top: 16px;
       right: 16px;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
       background: var(--card-bg);
       color: var(--text-primary);
-      font-size: 18px;
+      font-size: 16px;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      transition: all 0.3s ease;
+      transition: filter 0.2s ease;
       z-index: 1000;
       display: flex;
       align-items: center;
@@ -543,12 +507,11 @@
     }
     
     .theme-toggle:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      filter: brightness(0.95);
     }
     
     .theme-toggle:active {
-      transform: scale(0.95);
+      filter: brightness(0.9);
     }
   </style>
 </head>

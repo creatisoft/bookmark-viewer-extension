@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bookmark Viewer",
-  "version": "1.2.1",
+  "version": "2.0.0",
   "description": "A Browser extension for viewing bookmarks",
   "action": {
     "default_popup": "popup.html",
