@@ -4,10 +4,9 @@ Bookmark Viewer is a Manifest V3 browser extension for loading, searching, and e
 
 Current extension version: **2.0.0**
 
-<img width="444" height="602" alt="Bookmark Viewer screenshot" src="https://github.com/user-attachments/assets/acef0108-33e5-46c3-ba9f-ef7741f5f4e0" />
-
-<img width="444" height="602" alt="Bookmark Viewer screenshot" src="https://github.com/user-attachments/assets/bcc316c5-b352-40e0-a211-6072ae5309f8" />
-
+<img width="420" height="600" alt="bookmarkview2-new" src="https://github.com/user-attachments/assets/0fceebd7-ec3c-405a-a79a-e7470069a722" />
+<img width="420" height="600" alt="bookmarkview2-controls-new" src="https://github.com/user-attachments/assets/08a8473e-6866-43ad-b440-db2655cee4ba" />
+<img width="420" height="600" alt="bookmarkview2-light" src="https://github.com/user-attachments/assets/291668af-6105-413c-be6a-8a203b9d31bc" />
 
 
 ## Installation Instructions
