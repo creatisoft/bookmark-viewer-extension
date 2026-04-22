@@ -15,6 +15,41 @@ class BookmarkViewer {
     // Load saved theme or default to light
     const savedTheme = localStorage.getItem('bookmarkViewer_theme') || 'light';
     this.setTheme(savedTheme);
+    this.initializeBackgroundColor();
+  }
+
+  initializeBackgroundColor() {
+    const savedBgColor = localStorage.getItem('bookmarkViewer_bgColor');
+    if (savedBgColor) {
+      this.setBackgroundColor(savedBgColor, false);
+      return;
+    }
+
+    this.applyDefaultBackgroundForTheme();
+  }
+
+  applyDefaultBackgroundForTheme() {
+    const defaultBgColor = document.documentElement.getAttribute('data-theme') === 'dark' ? '#1a1a2e' : '#4A90E2';
+    document.documentElement.style.setProperty('--bg', defaultBgColor);
+
+    const bgColorPicker = document.getElementById('bgColorPicker');
+    if (bgColorPicker) {
+      bgColorPicker.value = defaultBgColor;
+    }
+  }
+
+  setBackgroundColor(color, persist = true) {
+    if (!color) return;
+    document.documentElement.style.setProperty('--bg', color);
+
+    const bgColorPicker = document.getElementById('bgColorPicker');
+    if (bgColorPicker) {
+      bgColorPicker.value = color;
+    }
+
+    if (persist) {
+      localStorage.setItem('bookmarkViewer_bgColor', color);
+    }
   }
 
   setTheme(theme) {
@@ -25,6 +60,10 @@ class BookmarkViewer {
       themeToggle.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
     }
     localStorage.setItem('bookmarkViewer_theme', theme);
+
+    if (!localStorage.getItem('bookmarkViewer_bgColor')) {
+      this.applyDefaultBackgroundForTheme();
+    }
   }
 
   toggleTheme() {
@@ -41,6 +80,7 @@ class BookmarkViewer {
     const exportButton = document.getElementById('exportButton');
     const searchInput = document.getElementById('searchInput');
     const themeToggle = document.getElementById('themeToggle');
+    const bgColorPicker = document.getElementById('bgColorPicker');
 
     loadChromeBookmarks.addEventListener('click', () => this.loadChromeBookmarks());
     fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
@@ -48,6 +88,7 @@ class BookmarkViewer {
     uploadSectionHeader.addEventListener('click', () => this.toggleAccordion());
     exportButton.addEventListener('click', () => this.exportBookmarks());
     themeToggle.addEventListener('click', () => this.toggleTheme());
+    bgColorPicker.addEventListener('input', (e) => this.setBackgroundColor(e.target.value));
 
     // Debounce search to reduce frequent filtering on large lists
     const debouncedFilter = this.debounce((query) => this.filterBookmarks(query), 250);

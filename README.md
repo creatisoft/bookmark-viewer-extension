@@ -17,6 +17,7 @@ Current extension version: **2.0.0**
 - Persists bookmarks in popup local storage so your last loaded list is restored.
 - Shows total bookmark and folder counts.
 - Supports light and dark theme toggle.
+- Includes a background color wheel next to the theme toggle for custom popup colors.
 
 ## Tech Notes
 
@@ -53,6 +54,9 @@ Current extension version: **2.0.0**
 4. Click any bookmark to open it in a new tab.
 5. Use **Export** to download the currently loaded list.
 6. Use **Clear List** to reset the popup state.
+7. Use the color wheel in the top-right to choose a custom background color (saved across popup sessions).
+
+If no custom background color is selected, the popup keeps its default light/dark background based on the current theme.
 
 ## Permissions
 

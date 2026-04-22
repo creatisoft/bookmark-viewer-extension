@@ -486,11 +486,17 @@
       box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
     }
 
-    /* Theme toggle button */
-    .theme-toggle {
+    .top-controls {
       position: fixed;
       top: 16px;
       right: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+    }
+
+    .theme-toggle {
       width: 36px;
       height: 36px;
       border-radius: 8px;
@@ -500,7 +506,6 @@
       font-size: 16px;
       cursor: pointer;
       transition: filter 0.2s ease;
-      z-index: 1000;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -513,10 +518,43 @@
     .theme-toggle:active {
       filter: brightness(0.9);
     }
+
+    .color-picker {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      cursor: pointer;
+      padding: 4px;
+      box-sizing: border-box;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .color-picker::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    .color-picker::-webkit-color-swatch {
+      border: none;
+      border-radius: 5px;
+    }
+
+    .color-picker:hover {
+      filter: brightness(0.95);
+    }
+
+    .color-picker:active {
+      filter: brightness(0.9);
+    }
   </style>
 </head>
 <body>
-  <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+  <div class="top-controls">
+    <input type="color" class="color-picker" id="bgColorPicker" title="Choose background color" aria-label="Choose background color" value="#4A90E2">
+    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+  </div>
   <div class="container">
     <h1>📚 Bookmark Viewer</h1>
     
