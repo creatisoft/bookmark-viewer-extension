@@ -8,27 +8,20 @@ Current extension version: **2.0.0**
 
 <img width="444" height="602" alt="Bookmark Viewer screenshot" src="https://github.com/user-attachments/assets/bcc316c5-b352-40e0-a211-6072ae5309f8" />
 
-## What It Does
 
-- Loads bookmarks directly from the browser bookmark tree.
-- Imports bookmarks from `.html` and `.json` files.
-- Searches bookmarks by title, URL, or folder.
-- Exports the current list as a Netscape-compatible `bookmarks.html` file.
-- Persists bookmarks in popup local storage so your last loaded list is restored.
-- Shows total bookmark and folder counts.
-- Supports light and dark theme toggle.
-- Includes a background color wheel next to the theme toggle for custom popup colors.
 
-## Tech Notes
+## Installation Instructions
 
-- No build step is required.
-- Uses `manifest_version: 3` with popup files:
-	- `popup.html`
-	- `popup.js`
+### For Google Chrome
 
-## Install (Unpacked)
+1. Clone or download this repository to your local machine.
+2. Open Google Chrome and navigate to `chrome://extensions/`.
+3. Enable **Developer mode** by toggling the switch in the top-right corner.
+4. Click on the **Load unpacked** button.
+5. Select the folder containing the extension files (this repository).
+6. The extension should now appear in your browser's toolbar.
 
-### Google Chrome
+### For Microsoft Edge
 
 1. Clone or download this repository.
 2. Open `chrome://extensions/`.
