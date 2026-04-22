@@ -1,60 +1,70 @@
 # Bookmark Viewer Extension
 
-Bookmark Viewer is a browser extension that allows you to view and manage your bookmarks in a user-friendly interface.
+Bookmark Viewer is a Manifest V3 browser extension for loading, searching, and exporting bookmarks from a compact popup UI.
 
-<img width="444" height="602" alt="Screenshot 2025-08-08 at 11 38 20 AM" src="https://github.com/user-attachments/assets/acef0108-33e5-46c3-ba9f-ef7741f5f4e0" />
+Current extension version: **2.0.0**
 
+<img width="444" height="602" alt="Bookmark Viewer screenshot" src="https://github.com/user-attachments/assets/acef0108-33e5-46c3-ba9f-ef7741f5f4e0" />
 
-<img width="444" height="602" alt="Screenshot 2025-08-08 at 11 38 32 AM" src="https://github.com/user-attachments/assets/bcc316c5-b352-40e0-a211-6072ae5309f8" />
+<img width="444" height="602" alt="Bookmark Viewer screenshot" src="https://github.com/user-attachments/assets/bcc316c5-b352-40e0-a211-6072ae5309f8" />
 
+## What It Does
 
+- Loads bookmarks directly from the browser bookmark tree.
+- Imports bookmarks from `.html` and `.json` files.
+- Searches bookmarks by title, URL, or folder.
+- Exports the current list as a Netscape-compatible `bookmarks.html` file.
+- Persists bookmarks in popup local storage so your last loaded list is restored.
+- Shows total bookmark and folder counts.
+- Supports light and dark theme toggle.
 
-## Installation Instructions
+## Tech Notes
 
-### For Google Chrome
+- No build step is required.
+- Uses `manifest_version: 3` with popup files:
+	- `popup.html`
+	- `popup.js`
 
-1. Clone or download this repository to your local machine.
-2. Open Google Chrome and navigate to `chrome://extensions/`.
-3. Enable **Developer mode** by toggling the switch in the top-right corner.
-4. Click on the **Load unpacked** button.
-5. Select the folder containing the extension files (this repository).
-6. The extension should now appear in your browser's toolbar.
+## Install (Unpacked)
 
-### For Microsoft Edge
+### Google Chrome
 
-1. Clone or download this repository to your local machine.
-2. Open Microsoft Edge and navigate to `edge://extensions/`.
-3. Enable **Developer mode** by toggling the switch in the bottom-left corner.
-4. Click on the **Load unpacked** button.
-5. Select the folder containing the extension files (this repository).
-6. The extension should now appear in your browser's toolbar.
+1. Clone or download this repository.
+2. Open `chrome://extensions/`.
+3. Enable **Developer mode**.
+4. Click **Load unpacked**.
+5. Select this repository folder.
 
-## Features
+### Microsoft Edge
 
-- View all your bookmarks in a clean and organized interface.
-- Load bookmarks directly from your browser or upload a file.
-- Search and filter bookmarks easily with a dynamic search bar.
-- Export your bookmarks to a file with a single click.
-- Manage bookmarks with options to clear or reload them.
+1. Clone or download this repository.
+2. Open `edge://extensions/`.
+3. Enable **Developer mode**.
+4. Click **Load unpacked**.
+5. Select this repository folder.
 
-## Known issues
+## Usage
 
-On Linux you will need to load bookmarks first, before uploading a file to
-populate the list. 
-
+1. Click the Bookmark Viewer extension icon.
+2. Load data using one of the following options:
+	 - **Load Browser Bookmarks**
+	 - **Upload Bookmark File** (`.html` or `.json`)
+3. Use the search box to filter the list.
+4. Click any bookmark to open it in a new tab.
+5. Use **Export** to download the currently loaded list.
+6. Use **Clear List** to reset the popup state.
 
 ## Permissions
 
-This extension requires the following permissions:
+- `bookmarks`: required to read bookmark data from the browser.
 
-- **Bookmarks**: To access and display your browser's bookmarks.
+## Project Structure
 
-## Icons
-
-The extension uses the following icons:
-
-- `16x16`, `48x48`, and `128x128` icons located in the `icons/` folder.
+- `manifest.json`: extension metadata and permissions.
+- `popup.html`: popup markup and styling.
+- `popup.js`: bookmark loading, parsing, filtering, persistence, and export logic.
+- `icons/`: extension icons (`16`, `48`, `128`).
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License. See `LICENSE` for details.
