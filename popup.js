@@ -2,9 +2,8 @@ class BookmarkViewer {
   constructor() {
     this.bookmarks = [];
     this.folders = new Set();
-    this.faviconCache = new Map();
-    this.renderCache = new Map(); // Cache rendered bookmark elements
     this.intersectionObserver = null; // For lazy loading favicons
+    this.renderToken = 0; // Incremented per render so stale batches stop
     this.initializeTheme();
     this.initializeEventListeners();
     this.setupIntersectionObserver();
@@ -31,6 +30,7 @@ class BookmarkViewer {
   applyDefaultBackgroundForTheme() {
     const defaultBgColor = document.documentElement.getAttribute('data-theme') === 'dark' ? '#1a1a2e' : '#4A90E2';
     document.documentElement.style.setProperty('--bg', defaultBgColor);
+    this.updateBackgroundTone(defaultBgColor);
 
     const bgColorPicker = document.getElementById('bgColorPicker');
     if (bgColorPicker) {
@@ -41,6 +41,7 @@ class BookmarkViewer {
   setBackgroundColor(color, persist = true) {
     if (!color) return;
     document.documentElement.style.setProperty('--bg', color);
+    this.updateBackgroundTone(color);
 
     const bgColorPicker = document.getElementById('bgColorPicker');
     if (bgColorPicker) {
@@ -49,6 +50,27 @@ class BookmarkViewer {
 
     if (persist) {
       localStorage.setItem('bookmarkViewer_bgColor', color);
+    }
+
+    const bgReset = document.getElementById('bgReset');
+    if (bgReset) bgReset.hidden = false;
+  }
+
+  resetBackgroundColor() {
+    localStorage.removeItem('bookmarkViewer_bgColor');
+    this.applyDefaultBackgroundForTheme();
+    document.getElementById('bgReset').hidden = true;
+  }
+
+  // Switch text on the background to dark when the color is light (#rrggbb)
+  updateBackgroundTone(color) {
+    const hex = color.replace('#', '');
+    const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    if (luminance > 0.6) {
+      document.documentElement.setAttribute('data-bg-tone', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-bg-tone');
     }
   }
 
@@ -81,6 +103,8 @@ class BookmarkViewer {
     const searchInput = document.getElementById('searchInput');
     const themeToggle = document.getElementById('themeToggle');
     const bgColorPicker = document.getElementById('bgColorPicker');
+    const bgReset = document.getElementById('bgReset');
+    const fileInputLabel = document.getElementById('fileInputLabel');
 
     loadChromeBookmarks.addEventListener('click', () => this.loadChromeBookmarks());
     fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
@@ -89,10 +113,32 @@ class BookmarkViewer {
     exportButton.addEventListener('click', () => this.exportBookmarks());
     themeToggle.addEventListener('click', () => this.toggleTheme());
     bgColorPicker.addEventListener('input', (e) => this.setBackgroundColor(e.target.value));
+    bgReset.addEventListener('click', () => this.resetBackgroundColor());
+
+    // A <label> doesn't open the file picker from the keyboard on its own
+    fileInputLabel.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
 
     // Debounce search to reduce frequent filtering on large lists
     const debouncedFilter = this.debounce((query) => this.filterBookmarks(query), 250);
     searchInput.addEventListener('input', (e) => debouncedFilter(e.target.value));
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && searchInput.value) {
+        e.preventDefault();
+        searchInput.value = '';
+        this.filterBookmarks('');
+      } else if (e.key === 'Enter') {
+        // Filter now so a pending debounce can't leave a stale first result
+        this.filterBookmarks(searchInput.value);
+        const first = document.querySelector('#bookmarksContainer a.bookmark-url');
+        if (first) this.openBookmark(first.href, e.ctrlKey || e.metaKey);
+      }
+    });
 
     // Use event delegation for bookmark clicks (more efficient for large lists)
     const bookmarksContainer = document.getElementById('bookmarksContainer');
@@ -100,8 +146,16 @@ class BookmarkViewer {
       const link = e.target.closest('a.bookmark-url');
       if (link) {
         e.preventDefault();
-        chrome.tabs.create({ url: link.href });
+        // Ctrl/Cmd+click opens behind the current tab and keeps the popup open
+        this.openBookmark(link.href, e.ctrlKey || e.metaKey);
       }
+    });
+  }
+
+  openBookmark(url, background = false) {
+    // Bookmarklets (javascript:) and some internal URLs can't be opened as tabs
+    chrome.tabs.create({ url, active: !background }).catch(() => {
+      this.showError("This bookmark type can't be opened from here.");
     });
   }
 
@@ -161,10 +215,12 @@ class BookmarkViewer {
       this.buildSearchIndex();
       
       this.updateFileInfo('Browser Bookmarks', this.bookmarks.length);
-      this.renderBookmarks();
+      this.filterBookmarks(document.getElementById('searchInput').value);
       this.updateStats();
       this.showClearButton();
-      this.saveBookmarksToStorage('Browser Bookmarks');
+      // Remember only the source; the list is re-read from the browser on open so it's never stale
+      this.clearPersistedBookmarks();
+      localStorage.setItem('bookmarkViewer_source', 'Browser Bookmarks');
       this.minimizeAccordion();
       
     } catch (error) {
@@ -181,14 +237,16 @@ class BookmarkViewer {
       if (node.children) {
         // This is a folder
         const currentPath = folderPath ? `${folderPath} > ${node.title}` : node.title;
-        this.folders.add(currentPath);
+        // The tree's root node has no title; don't count it as a folder
+        if (currentPath) this.folders.add(currentPath);
         this.extractBookmarksFromTree(node.children, currentPath);
       } else if (node.url) {
         // This is a bookmark
         this.bookmarks.push({
           title: node.title || node.url,
           url: node.url,
-          folder: folderPath || 'Bookmarks'
+          folder: folderPath || 'Bookmarks',
+          dateAdded: node.dateAdded
         });
       }
     }
@@ -211,10 +269,7 @@ class BookmarkViewer {
       if (fileExtension === 'html') {
         this.bookmarks = this.parseHTMLBookmarks(content);
       } else if (fileExtension === 'json') {
-        console.log('Parsing JSON file:', file.name);
-        console.log('JSON content preview:', content.substring(0, 500));
         this.bookmarks = this.parseJSONBookmarks(content);
-        console.log('Extracted bookmarks:', this.bookmarks.length);
       } else {
         throw new Error('Unsupported file format. Please use HTML or JSON files.');
       }
@@ -222,7 +277,7 @@ class BookmarkViewer {
       this.buildSearchIndex();
 
       this.updateFileInfo(file.name, this.bookmarks.length);
-      this.renderBookmarks();
+      this.filterBookmarks(document.getElementById('searchInput').value);
       this.updateStats();
       this.showClearButton();
       this.saveBookmarksToStorage(file.name);
@@ -233,6 +288,8 @@ class BookmarkViewer {
       this.showError(error.message);
     } finally {
       this.showLoading(false);
+      // Reset so choosing the same file again still fires 'change'
+      event.target.value = '';
     }
   }
 
@@ -254,21 +311,13 @@ class BookmarkViewer {
     links.forEach(link => {
       const href = link.getAttribute('href');
       const title = link.textContent.trim() || href;
-      
-      // Try to find folder context
-      let folder = 'Bookmarks';
-      let parent = link.parentElement;
-      while (parent) {
-        const folderHeader = parent.querySelector('h3');
-        if (folderHeader) {
-          folder = folderHeader.textContent.trim();
-          break;
-        }
-        parent = parent.parentElement;
-      }
+      const folder = this.getHTMLFolderPath(link);
 
       if (href && href !== '#' && !href.startsWith('javascript:')) {
-        bookmarks.push({ title, url: href, folder });
+        // ADD_DATE is in seconds; dateAdded matches the browser API's milliseconds
+        const addDate = parseInt(link.getAttribute('add_date'), 10);
+        const dateAdded = addDate ? addDate * 1000 : undefined;
+        bookmarks.push({ title, url: href, folder, dateAdded });
         this.folders.add(folder);
       }
     });
@@ -276,9 +325,30 @@ class BookmarkViewer {
     return bookmarks;
   }
 
+  // Build a full "A > B" folder path for a link in a Netscape bookmark file.
+  // Each folder is <DT><H3>Name</H3><DL>...</DL>, so the <H3> naming a <DL>
+  // is the nearest <H3> sibling before it.
+  getHTMLFolderPath(link) {
+    const names = [];
+    let dl = link.closest('dl');
+    while (dl) {
+      let prev = dl.previousElementSibling;
+      while (prev && prev.tagName !== 'H3') prev = prev.previousElementSibling;
+      if (prev) names.unshift(prev.textContent.trim());
+      dl = dl.parentElement ? dl.parentElement.closest('dl') : null;
+    }
+    return names.length ? names.join(' > ') : 'Bookmarks';
+  }
+
   parseJSONBookmarks(jsonString) {
     const data = JSON.parse(jsonString);
     const bookmarks = [];
+
+    // Chrome's Bookmarks file stores date_added as microseconds since 1601-01-01
+    const fromChromeTime = (value) => {
+      const ms = Number(value) / 1000 - 11644473600000;
+      return ms > 0 ? ms : undefined;
+    };
 
     const extractBookmarks = (item, folderPath = 'Bookmarks') => {
       // Handle Chrome bookmark format (with type field)
@@ -286,7 +356,8 @@ class BookmarkViewer {
         bookmarks.push({
           title: item.name || item.title || item.url,
           url: item.url,
-          folder: folderPath
+          folder: folderPath,
+          dateAdded: fromChromeTime(item.date_added)
         });
         this.folders.add(folderPath);
       } else if (item.type === 'folder' && item.children) {
@@ -339,8 +410,6 @@ class BookmarkViewer {
       extractBookmarks(data);
     }
 
-    // Log for debugging
-    console.log(`Parsed ${bookmarks.length} bookmarks from JSON`);
     return bookmarks;
   }
 
@@ -404,6 +473,10 @@ class BookmarkViewer {
   renderListInBatches(list) {
     const container = document.getElementById('bookmarksContainer');
     const emptyState = document.getElementById('emptyState');
+    const token = ++this.renderToken;
+
+    // Stop watching favicons of cards that are about to be removed
+    if (this.intersectionObserver) this.intersectionObserver.disconnect();
 
     // Clear container efficiently
     container.textContent = '';
@@ -420,6 +493,9 @@ class BookmarkViewer {
     let index = 0;
 
     const renderChunk = () => {
+      // A newer render (search, reload, clear) has started; stop this one
+      if (token !== this.renderToken) return;
+
       const frag = document.createDocumentFragment();
       const end = Math.min(index + batchSize, list.length);
       
@@ -460,12 +536,12 @@ class BookmarkViewer {
   }
 
   clearBookmarks() {
-    // Clear data structures
+    // Clear data structures and stop any render in progress
+    this.renderToken++;
     this.bookmarks = [];
     this.folders.clear();
-    this.renderCache.clear();
-    this.faviconCache.clear();
-    
+    if (this.intersectionObserver) this.intersectionObserver.disconnect();
+
     // Clear UI efficiently
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.value = '';
@@ -475,50 +551,33 @@ class BookmarkViewer {
     document.getElementById('emptyState').style.display = 'block';
     document.getElementById('stats').style.display = 'none';
     document.getElementById('clearButton').style.display = 'none';
-    document.getElementById('status').textContent = 'Extension loaded successfully!';
-    document.getElementById('status').style.backgroundColor = '#e8f5e8';
-    document.getElementById('status').style.color = '#2e7d32';
     this.hideError();
     this.clearPersistedBookmarks();
     this.expandAccordion();
   }
 
   toggleAccordion() {
-    const uploadSection = document.getElementById('uploadSection');
-    const uploadSectionContent = document.getElementById('uploadSectionContent');
-    const accordionToggle = document.getElementById('accordionToggle');
-    
-    if (uploadSectionContent.classList.contains('expanded')) {
-      uploadSectionContent.classList.remove('expanded');
-      accordionToggle.classList.remove('expanded');
-      accordionToggle.textContent = '▼';
-    } else {
-      uploadSectionContent.classList.add('expanded');
-      accordionToggle.classList.add('expanded');
-      accordionToggle.textContent = '▲';
-    }
+    // Controls only collapse once bookmarks are loaded
+    if (!document.getElementById('uploadSection').classList.contains('has-bookmarks')) return;
+
+    const expanded = !document.getElementById('uploadSectionContent').classList.contains('expanded');
+    this.setAccordionExpanded(expanded);
+  }
+
+  setAccordionExpanded(expanded) {
+    document.getElementById('uploadSectionContent').classList.toggle('expanded', expanded);
+    document.getElementById('accordionToggle').classList.toggle('expanded', expanded);
+    document.getElementById('uploadSectionHeader').setAttribute('aria-expanded', String(expanded));
   }
 
   minimizeAccordion() {
-    const uploadSection = document.getElementById('uploadSection');
-    const uploadSectionContent = document.getElementById('uploadSectionContent');
-    const accordionToggle = document.getElementById('accordionToggle');
-    
-    uploadSection.classList.add('has-bookmarks');
-    uploadSectionContent.classList.remove('expanded');
-    accordionToggle.classList.remove('expanded');
-    accordionToggle.textContent = '▼';
+    document.getElementById('uploadSection').classList.add('has-bookmarks');
+    this.setAccordionExpanded(false);
   }
 
   expandAccordion() {
-    const uploadSection = document.getElementById('uploadSection');
-    const uploadSectionContent = document.getElementById('uploadSectionContent');
-    const accordionToggle = document.getElementById('accordionToggle');
-    
-    uploadSection.classList.remove('has-bookmarks');
-    uploadSectionContent.classList.add('expanded');
-    accordionToggle.classList.add('expanded');
-    accordionToggle.textContent = '▲';
+    document.getElementById('uploadSection').classList.remove('has-bookmarks');
+    this.setAccordionExpanded(true);
   }
 
   showLoading(show) {
@@ -535,25 +594,31 @@ class BookmarkViewer {
     document.getElementById('error').style.display = 'none';
   }
 
+  // Also escapes quotes, since the output is used inside HREF="..." attributes
   escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
+  // Served from the browser's own favicon cache (needs the "favicon" permission),
+  // so no request about your bookmarks leaves the machine
   getFaviconUrl(url) {
-    try {
-      const domain = new URL(url).hostname;
-      if (this.faviconCache.has(domain)) return this.faviconCache.get(domain);
-      const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
-      this.faviconCache.set(domain, iconUrl);
-      return iconUrl;
-    } catch (error) {
-      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04IDRMMTIgOEw4IDEyTDQgOEw4IDRaIiBmaWxsPSIjQ0NDQ0NDIi8+Cjwvc3ZnPgo=';
-    }
+    const iconUrl = new URL(chrome.runtime.getURL('/_favicon/'));
+    iconUrl.searchParams.set('pageUrl', url);
+    iconUrl.searchParams.set('size', '16');
+    return iconUrl.toString();
   }
 
   loadPersistedBookmarks() {
+    // Browser bookmarks are always re-read so changes made since last time show up
+    if (localStorage.getItem('bookmarkViewer_source') === 'Browser Bookmarks') {
+      this.loadChromeBookmarks();
+      return;
+    }
+
     try {
       const savedBookmarks = localStorage.getItem('bookmarkViewer_bookmarks');
       const savedFolders = localStorage.getItem('bookmarkViewer_folders');
@@ -579,11 +644,14 @@ class BookmarkViewer {
 
   saveBookmarksToStorage(source) {
     try {
-      localStorage.setItem('bookmarkViewer_bookmarks', JSON.stringify(this.bookmarks));
+      // Save without the _search index; it's rebuilt on load
+      const toSave = this.bookmarks.map(({ title, url, folder, dateAdded }) => ({ title, url, folder, dateAdded }));
+      localStorage.setItem('bookmarkViewer_bookmarks', JSON.stringify(toSave));
       localStorage.setItem('bookmarkViewer_folders', JSON.stringify([...this.folders]));
       localStorage.setItem('bookmarkViewer_source', source);
     } catch (error) {
       console.error('Failed to save bookmarks:', error);
+      this.showError('Bookmarks loaded, but too large to save for next time.');
     }
   }
 
@@ -613,7 +681,8 @@ class BookmarkViewer {
     a.download = 'bookmarks.html';
     a.click();
 
-    URL.revokeObjectURL(url);
+    // Revoking right away can cancel the download before it starts
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   generateBookmarkHTML() {
@@ -631,34 +700,44 @@ class BookmarkViewer {
       '<DL><p>'
     );
 
-    // Group bookmarks by folder
-    const bookmarksByFolder = new Map();
+    // Rebuild the folder tree from "A > B" paths. Bookmarks with no folder
+    // ("Bookmarks") go at the top level.
+    const root = { children: new Map(), bookmarks: [] };
     for (let i = 0; i < this.bookmarks.length; i++) {
       const bookmark = this.bookmarks[i];
-      const folder = bookmark.folder || 'Bookmarks';
-      if (!bookmarksByFolder.has(folder)) {
-        bookmarksByFolder.set(folder, []);
+      let node = root;
+      if (bookmark.folder && bookmark.folder !== 'Bookmarks') {
+        for (const name of bookmark.folder.split(' > ')) {
+          if (!node.children.has(name)) {
+            node.children.set(name, { children: new Map(), bookmarks: [] });
+          }
+          node = node.children.get(name);
+        }
       }
-      bookmarksByFolder.get(folder).push(bookmark);
+      node.bookmarks.push(bookmark);
     }
 
-    const timestamp = Math.floor(Date.now() / 1000);
-    
-    // Generate HTML for each folder
-    bookmarksByFolder.forEach((bookmarks, folder) => {
-      parts.push(`    <DT><H3>${this.escapeHtml(folder)}</H3>`);
-      parts.push('    <DL><p>');
-      
-      for (let i = 0; i < bookmarks.length; i++) {
-        const bookmark = bookmarks[i];
-        parts.push(`        <DT><A HREF="${this.escapeHtml(bookmark.url)}" ADD_DATE="${timestamp}">${this.escapeHtml(bookmark.title)}</A>`);
+    const now = Date.now();
+    const writeFolder = (node, depth) => {
+      const indent = '    '.repeat(depth);
+
+      node.children.forEach((child, name) => {
+        parts.push(`${indent}<DT><H3>${this.escapeHtml(name)}</H3>`);
+        parts.push(`${indent}<DL><p>`);
+        writeFolder(child, depth + 1);
+        parts.push(`${indent}</DL><p>`);
+      });
+
+      for (let i = 0; i < node.bookmarks.length; i++) {
+        const bookmark = node.bookmarks[i];
+        const addDate = Math.floor((bookmark.dateAdded || now) / 1000);
+        parts.push(`${indent}<DT><A HREF="${this.escapeHtml(bookmark.url)}" ADD_DATE="${addDate}">${this.escapeHtml(bookmark.title)}</A>`);
       }
-      
-      parts.push('    </DL><p>');
-    });
+    };
+    writeFolder(root, 1);
 
     parts.push('</DL><p>');
-    
+
     return parts.join('\n');
   }
 
@@ -670,19 +749,20 @@ class BookmarkViewer {
       return;
     }
     
+    // Every word must match, but not necessarily next to each other
+    const terms = q.split(/\s+/);
+
     // Use for loop for better performance on large arrays
     const filteredBookmarks = [];
     for (let i = 0; i < this.bookmarks.length; i++) {
       const b = this.bookmarks[i];
-      if (b._search && b._search.includes(q)) {
+      if (b._search && terms.every(t => b._search.includes(t))) {
         filteredBookmarks.push(b);
       }
     }
     
     this.renderFilteredBookmarks(filteredBookmarks);
   }
-
-  // ...existing code...
 }
 
 // Initialize the bookmark viewer when the page loads

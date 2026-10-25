@@ -24,8 +24,6 @@
       --folder-bg: #E3F2FD;
       --folder-text: #0D47A1;
       --folder-border: rgba(13, 71, 161, 0.1);
-      --status-bg: #E8F5E9;
-      --status-text: #1B5E20;
       --error-bg: #FFEBEE;
       --error-text: #B71C1C;
       --scrollbar-track: rgba(255, 255, 255, 0.15);
@@ -34,6 +32,7 @@
       --empty-text: rgba(255, 255, 255, 0.8);
       --empty-heading: rgba(255, 255, 255, 0.9);
       --header-hover-bg: rgba(0, 0, 0, 0.03);
+      --on-bg: #ffffff;
     }
 
     [data-theme="dark"] {
@@ -57,8 +56,6 @@
       --folder-bg: #2d3748;
       --folder-text: #90cdf4;
       --folder-border: rgba(144, 205, 244, 0.15);
-      --status-bg: #1c3a2a;
-      --status-text: #9ae6b4;
       --error-bg: #3d1515;
       --error-text: #feb2b2;
       --scrollbar-track: rgba(0, 0, 0, 0.2);
@@ -69,9 +66,21 @@
       --header-hover-bg: rgba(255, 255, 255, 0.04);
     }
 
+    /* Set from JS when the background color is light, so text on it stays readable */
+    :root[data-bg-tone="light"] {
+      --on-bg: #1a1a1a;
+      --scrollbar-track: rgba(0, 0, 0, 0.08);
+      --scrollbar-thumb: rgba(0, 0, 0, 0.25);
+      --scrollbar-thumb-hover: rgba(0, 0, 0, 0.4);
+      --empty-text: rgba(0, 0, 0, 0.6);
+      --empty-heading: rgba(0, 0, 0, 0.75);
+    }
+
     body {
-      width: 380px;
-      height: 580px;
+      /* Same outer size as before (380x580 plus 8px padding) */
+      box-sizing: border-box;
+      width: 396px;
+      height: 596px;
       margin: 0;
       padding: 8px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -82,15 +91,24 @@
     
     .container {
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .container > * {
+      flex-shrink: 0;
     }
     
     h1 {
-      color: #ffffff;
+      color: var(--on-bg);
       font-size: 20px;
       font-weight: 700;
       margin-bottom: 24px;
       letter-spacing: -0.5px;
-      text-align: center;
+      /* Left-aligned so it never runs under the buttons in the top-right corner */
+      text-align: left;
+      padding-left: 8px;
     }
     
     .upload-section {
@@ -104,6 +122,12 @@
     }
     
     .upload-section-header {
+      width: 100%;
+      background: none;
+      border: none;
+      font: inherit;
+      color: inherit;
+      text-align: left;
       padding: 14px 18px;
       cursor: pointer;
       border-bottom: 1px solid var(--card-border);
@@ -116,6 +140,12 @@
     
     .upload-section-header:hover {
       background-color: var(--header-hover-bg);
+    }
+
+    .upload-section-header:focus-visible,
+    .file-input-button:focus-visible {
+      outline: 2px solid var(--input-focus-border);
+      outline-offset: 2px;
     }
     
     .upload-section-title {
@@ -143,12 +173,6 @@
       overflow: hidden;
     }
     
-    .upload-section-content.collapsed {
-      max-height: 0;
-      opacity: 0;
-      padding: 0 18px;
-    }
-    
     .upload-section.has-bookmarks .upload-section-content {
       max-height: 0;
       opacity: 0;
@@ -161,21 +185,8 @@
       padding: 18px;
     }
     
-    .file-input-wrapper {
-      position: relative;
-      display: inline-block;
-      margin-bottom: 6px;
-    }
-    
-    .file-input {
-      position: absolute;
-      opacity: 0;
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-    }
-    
     .file-input-button {
+      display: inline-block;
       background: #4A90E2;
       color: white;
       padding: 10px 22px;
@@ -226,18 +237,6 @@
       filter: brightness(0.9);
     }
     
-    .status {
-      margin-top: 12px;
-      padding: 10px 14px;
-      background: var(--status-bg);
-      border-radius: 8px;
-      font-size: 12px;
-      color: var(--status-text);
-      font-weight: 500;
-      border: 1px solid rgba(27, 94, 32, 0.1);
-      transition: background 0.3s ease, color 0.3s ease;
-    }
-    
     .file-info {
       margin-top: 12px;
       color: var(--text-secondary);
@@ -250,12 +249,16 @@
       transition: background 0.3s ease, color 0.3s ease;
     }
     
+    .file-info:empty {
+      display: none;
+    }
+
     .error {
       background: var(--error-bg);
       color: var(--error-text);
       padding: 10px 14px;
       border-radius: 8px;
-      margin-top: 12px;
+      margin-bottom: 10px;
       border: 1px solid rgba(183, 28, 28, 0.1);
       font-size: 12px;
       font-weight: 500;
@@ -299,8 +302,9 @@
       letter-spacing: 0.5px;
     }
     
-    .bookmarks-container {
-      max-height: 400px;
+    .container > .bookmarks-container {
+      flex: 1 1 auto;
+      min-height: 0; /* lets it shrink and scroll */
       overflow-y: auto;
       margin-top: 16px;
       padding-right: 6px;
@@ -428,7 +432,8 @@
     .loading {
       text-align: center;
       padding: 30px;
-      color: rgba(255, 255, 255, 0.9);
+      color: var(--on-bg);
+      opacity: 0.9;
       font-size: 14px;
       font-weight: 500;
     }
@@ -496,7 +501,8 @@
       z-index: 1000;
     }
 
-    .theme-toggle {
+    .theme-toggle,
+    .icon-button {
       width: 36px;
       height: 36px;
       border-radius: 8px;
@@ -511,11 +517,18 @@
       justify-content: center;
     }
     
-    .theme-toggle:hover {
+    /* display: flex above would otherwise override the hidden attribute */
+    .icon-button[hidden] {
+      display: none;
+    }
+
+    .theme-toggle:hover,
+    .icon-button:hover {
       filter: brightness(0.95);
     }
     
-    .theme-toggle:active {
+    .theme-toggle:active,
+    .icon-button:active {
       filter: brightness(0.9);
     }
 
@@ -552,6 +565,7 @@
 </head>
 <body>
   <div class="top-controls">
+    <button type="button" class="icon-button" id="bgReset" title="Reset background color" aria-label="Reset background color" hidden>↺</button>
     <input type="color" class="color-picker" id="bgColorPicker" title="Choose background color" aria-label="Choose background color" value="#4A90E2">
     <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
   </div>
@@ -559,26 +573,20 @@
     <h1>📚 Bookmark Viewer</h1>
     
     <div class="upload-section" id="uploadSection">
-      <div class="upload-section-header" id="uploadSectionHeader">
+      <button type="button" class="upload-section-header" id="uploadSectionHeader" aria-expanded="true" aria-controls="uploadSectionContent">
         <span class="upload-section-title">⚙️ Controls</span>
-        <span class="accordion-toggle" id="accordionToggle">▼</span>
-      </div>
+        <span class="accordion-toggle expanded" id="accordionToggle" aria-hidden="true">▼</span>
+      </button>
       
-      <div class="upload-section-content" id="uploadSectionContent">
-        <div id="status" class="status">Extension loaded successfully!</div>
-        
+      <div class="upload-section-content expanded" id="uploadSectionContent">
         <div class="chrome-bookmarks-section">
           <button id="loadChromeBookmarks" class="chrome-bookmarks-button">
             📖 Load Browser Bookmarks
           </button>
         </div>
         
-        <div class="file-input-wrapper">
-          <input type="file" id="fileInput" class="file-input" accept=".html,.json" />
-          <button class="file-input-button">
-            📁 Upload Bookmark File
-          </button>
-        </div>
+        <input type="file" id="fileInput" accept=".html,.json" hidden>
+        <label for="fileInput" id="fileInputLabel" class="file-input-button" tabindex="0" role="button">📁 Upload Bookmark File</label>
         
         <button id="exportButton" class="file-input-button export-button">⤴ Export</button>
         
@@ -587,7 +595,6 @@
         </button>
         
         <div id="fileInfo" class="file-info"></div>
-        <div id="error" class="error" style="display: none;"></div>
         
         <div id="stats" class="stats" style="display: none;">
           <div class="stat-item">
@@ -603,8 +610,10 @@
     </div>
     
     <div id="searchContainer">
-      <input type="text" id="searchInput" placeholder="Search bookmarks...">
+      <input type="search" id="searchInput" placeholder="Search bookmarks..." aria-label="Search bookmarks" autofocus>
     </div>
+
+    <div id="error" class="error" role="alert" style="display: none;"></div>
     
     <div id="loading" class="loading" style="display: none;">
       ⏳ Loading bookmarks...
