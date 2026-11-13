@@ -1,7 +1,10 @@
 class BookmarkViewer {
   constructor() {
-    this.bookmarks = [];
+    this.bookmarks = []; // Combined list of every loaded source
     this.folders = new Set();
+    this.browserSource = null; // { name, bookmarks, folders } once browser bookmarks are loaded
+    this.fileSources = []; // [{ name, bookmarks, folders }], one per uploaded file
+    this.showSourceLabels = false;
     this.intersectionObserver = null; // For lazy loading favicons
     this.renderToken = 0; // Incremented per render so stale batches stop
     this.initializeTheme();
@@ -198,7 +201,8 @@ class BookmarkViewer {
       const title = (b.title || '').toLowerCase();
       const url = (b.url || '').toLowerCase();
       const folder = (b.folder || '').toLowerCase();
-      b._search = `${title} ${url} ${folder}`;
+      const source = (b.source || '').toLowerCase();
+      b._search = `${title} ${url} ${folder} ${source}`;
     }
   }
 
@@ -208,21 +212,16 @@ class BookmarkViewer {
 
     try {
       const bookmarkTree = await chrome.bookmarks.getTree();
-      this.bookmarks = [];
-      this.folders = new Set();
-      
-      this.extractBookmarksFromTree(bookmarkTree);
-      this.buildSearchIndex();
-      
-      this.updateFileInfo('Browser Bookmarks', this.bookmarks.length);
-      this.filterBookmarks(document.getElementById('searchInput').value);
-      this.updateStats();
-      this.showClearButton();
-      // Remember only the source; the list is re-read from the browser on open so it's never stale
-      this.clearPersistedBookmarks();
-      localStorage.setItem('bookmarkViewer_source', 'Browser Bookmarks');
+      const bookmarks = [];
+      const folders = new Set();
+      this.extractBookmarksFromTree(bookmarkTree, '', bookmarks, folders);
+
+      this.browserSource = { name: 'Browser Bookmarks', bookmarks, folders };
+      // Remember only that they're shown; they're re-read on open so they're never stale
+      localStorage.setItem('bookmarkViewer_browser', 'true');
+      this.updateCombinedBookmarks();
       this.minimizeAccordion();
-      
+
     } catch (error) {
       this.showError('Failed to load browser bookmarks: ' + error.message);
     } finally {
@@ -230,7 +229,7 @@ class BookmarkViewer {
     }
   }
 
-  extractBookmarksFromTree(tree, folderPath = '') {
+  extractBookmarksFromTree(tree, folderPath, bookmarks, folders) {
     // Use for loop for better performance
     for (let i = 0; i < tree.length; i++) {
       const node = tree[i];
@@ -238,11 +237,11 @@ class BookmarkViewer {
         // This is a folder
         const currentPath = folderPath ? `${folderPath} > ${node.title}` : node.title;
         // The tree's root node has no title; don't count it as a folder
-        if (currentPath) this.folders.add(currentPath);
-        this.extractBookmarksFromTree(node.children, currentPath);
+        if (currentPath) folders.add(currentPath);
+        this.extractBookmarksFromTree(node.children, currentPath, bookmarks, folders);
       } else if (node.url) {
         // This is a bookmark
-        this.bookmarks.push({
+        bookmarks.push({
           title: node.title || node.url,
           url: node.url,
           folder: folderPath || 'Bookmarks',
@@ -263,24 +262,32 @@ class BookmarkViewer {
       const content = await this.readFile(file);
       const fileExtension = file.name.split('.').pop().toLowerCase();
 
-      this.bookmarks = [];
-      this.folders = new Set();
+      const folders = new Set();
+      let bookmarks;
 
       if (fileExtension === 'html') {
-        this.bookmarks = this.parseHTMLBookmarks(content);
+        bookmarks = this.parseHTMLBookmarks(content, folders);
       } else if (fileExtension === 'json') {
-        this.bookmarks = this.parseJSONBookmarks(content);
+        bookmarks = this.parseJSONBookmarks(content, folders);
       } else {
         throw new Error('Unsupported file format. Please use HTML or JSON files.');
       }
 
-      this.buildSearchIndex();
+      if (bookmarks.length === 0) {
+        throw new Error(`No bookmarks found in ${file.name}.`);
+      }
 
-      this.updateFileInfo(file.name, this.bookmarks.length);
-      this.filterBookmarks(document.getElementById('searchInput').value);
-      this.updateStats();
-      this.showClearButton();
-      this.saveBookmarksToStorage(file.name);
+      // Uploading a file with the same name again replaces its earlier copy
+      const source = { name: file.name, bookmarks, folders };
+      const existing = this.fileSources.findIndex(s => s.name === file.name);
+      if (existing >= 0) {
+        this.fileSources[existing] = source;
+      } else {
+        this.fileSources.push(source);
+      }
+
+      this.updateCombinedBookmarks();
+      this.saveFileSources();
       this.minimizeAccordion();
 
     } catch (error) {
@@ -302,7 +309,7 @@ class BookmarkViewer {
     });
   }
 
-  parseHTMLBookmarks(html) {
+  parseHTMLBookmarks(html, folders) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const bookmarks = [];
@@ -318,7 +325,7 @@ class BookmarkViewer {
         const addDate = parseInt(link.getAttribute('add_date'), 10);
         const dateAdded = addDate ? addDate * 1000 : undefined;
         bookmarks.push({ title, url: href, folder, dateAdded });
-        this.folders.add(folder);
+        folders.add(folder);
       }
     });
 
@@ -340,7 +347,7 @@ class BookmarkViewer {
     return names.length ? names.join(' > ') : 'Bookmarks';
   }
 
-  parseJSONBookmarks(jsonString) {
+  parseJSONBookmarks(jsonString, folders) {
     const data = JSON.parse(jsonString);
     const bookmarks = [];
 
@@ -359,7 +366,7 @@ class BookmarkViewer {
           folder: folderPath,
           dateAdded: fromChromeTime(item.date_added)
         });
-        this.folders.add(folderPath);
+        folders.add(folderPath);
       } else if (item.type === 'folder' && item.children) {
         const newFolderPath = folderPath === 'Bookmarks' ? item.name : `${folderPath} > ${item.name}`;
         item.children.forEach(child => extractBookmarks(child, newFolderPath));
@@ -371,13 +378,13 @@ class BookmarkViewer {
           url: item.url,
           folder: item.folder || folderPath
         });
-        this.folders.add(item.folder || folderPath);
+        folders.add(item.folder || folderPath);
       }
       // Handle objects with children but no type (folder-like)
       else if (item.children && Array.isArray(item.children)) {
         const newFolderPath = item.name || item.title || folderPath;
         if (newFolderPath !== folderPath) {
-          this.folders.add(newFolderPath);
+          folders.add(newFolderPath);
         }
         item.children.forEach(child => extractBookmarks(child, newFolderPath));
       }
@@ -467,6 +474,14 @@ class BookmarkViewer {
       card.appendChild(folderDiv);
     }
 
+    // Only label where a bookmark came from when more than one source is loaded
+    if (this.showSourceLabels && bookmark.source) {
+      const sourceDiv = document.createElement('div');
+      sourceDiv.className = 'bookmark-source';
+      sourceDiv.textContent = bookmark.source;
+      card.appendChild(sourceDiv);
+    }
+
     return card;
   }
 
@@ -525,9 +540,33 @@ class BookmarkViewer {
     statsContainer.style.display = this.bookmarks.length > 0 ? 'flex' : 'none';
   }
 
-  updateFileInfo(fileName, count) {
+  // Merge every loaded source into one list and refresh the UI
+  updateCombinedBookmarks() {
+    const sources = this.browserSource ? [this.browserSource, ...this.fileSources] : this.fileSources;
+    this.showSourceLabels = sources.length > 1;
+    this.bookmarks = [];
+    this.folders = new Set();
+
+    for (const source of sources) {
+      for (const bookmark of source.bookmarks) {
+        bookmark.source = source.name;
+        this.bookmarks.push(bookmark);
+      }
+      source.folders.forEach(folder => this.folders.add(folder));
+    }
+
+    this.buildSearchIndex();
+    this.updateFileInfo(sources);
+    this.filterBookmarks(document.getElementById('searchInput').value);
+    this.updateStats();
+    this.showClearButton();
+  }
+
+  updateFileInfo(sources) {
     const fileInfo = document.getElementById('fileInfo');
-    fileInfo.textContent = `Loaded: ${fileName} (${count} bookmarks found)`;
+    fileInfo.textContent = sources.length
+      ? 'Loaded: ' + sources.map(s => `${s.name} (${s.bookmarks.length})`).join(', ')
+      : '';
   }
 
   showClearButton() {
@@ -540,6 +579,8 @@ class BookmarkViewer {
     this.renderToken++;
     this.bookmarks = [];
     this.folders.clear();
+    this.browserSource = null;
+    this.fileSources = [];
     if (this.intersectionObserver) this.intersectionObserver.disconnect();
 
     // Clear UI efficiently
@@ -613,42 +654,59 @@ class BookmarkViewer {
   }
 
   loadPersistedBookmarks() {
-    // Browser bookmarks are always re-read so changes made since last time show up
-    if (localStorage.getItem('bookmarkViewer_source') === 'Browser Bookmarks') {
-      this.loadChromeBookmarks();
-      return;
-    }
+    this.migrateSingleSourceStorage();
 
     try {
-      const savedBookmarks = localStorage.getItem('bookmarkViewer_bookmarks');
-      const savedFolders = localStorage.getItem('bookmarkViewer_folders');
-      const savedSource = localStorage.getItem('bookmarkViewer_source');
-      
-      if (savedBookmarks) {
-        this.bookmarks = JSON.parse(savedBookmarks);
-        this.folders = new Set(JSON.parse(savedFolders || '[]'));
-        this.buildSearchIndex();
-        
-        if (this.bookmarks.length > 0) {
-          this.updateFileInfo(savedSource || 'Saved Bookmarks', this.bookmarks.length);
-          this.renderBookmarks();
-          this.updateStats();
-          this.showClearButton();
-          this.minimizeAccordion();
-        }
-      }
+      const saved = JSON.parse(localStorage.getItem('bookmarkViewer_files') || '[]');
+      this.fileSources = saved.map(s => ({ name: s.name, bookmarks: s.bookmarks, folders: new Set(s.folders) }));
     } catch (error) {
       console.error('Failed to load persisted bookmarks:', error);
     }
+
+    if (this.fileSources.length > 0) {
+      this.updateCombinedBookmarks();
+      this.minimizeAccordion();
+    }
+
+    // Browser bookmarks are always re-read so changes made since last time show up
+    if (localStorage.getItem('bookmarkViewer_browser') === 'true') {
+      this.loadChromeBookmarks();
+    }
   }
 
-  saveBookmarksToStorage(source) {
+  // Older versions kept a single source under these keys; move it to the new ones
+  migrateSingleSourceStorage() {
+    const oldSource = localStorage.getItem('bookmarkViewer_source');
+    if (oldSource === null) return;
+
     try {
-      // Save without the _search index; it's rebuilt on load
-      const toSave = this.bookmarks.map(({ title, url, folder, dateAdded }) => ({ title, url, folder, dateAdded }));
-      localStorage.setItem('bookmarkViewer_bookmarks', JSON.stringify(toSave));
-      localStorage.setItem('bookmarkViewer_folders', JSON.stringify([...this.folders]));
-      localStorage.setItem('bookmarkViewer_source', source);
+      const oldBookmarks = localStorage.getItem('bookmarkViewer_bookmarks');
+      if (oldSource === 'Browser Bookmarks') {
+        localStorage.setItem('bookmarkViewer_browser', 'true');
+      } else if (oldBookmarks) {
+        const oldFolders = JSON.parse(localStorage.getItem('bookmarkViewer_folders') || '[]');
+        localStorage.setItem('bookmarkViewer_files', JSON.stringify([
+          { name: oldSource, bookmarks: JSON.parse(oldBookmarks), folders: oldFolders }
+        ]));
+      }
+    } catch (error) {
+      console.error('Failed to migrate saved bookmarks:', error);
+    }
+
+    localStorage.removeItem('bookmarkViewer_bookmarks');
+    localStorage.removeItem('bookmarkViewer_folders');
+    localStorage.removeItem('bookmarkViewer_source');
+  }
+
+  saveFileSources() {
+    try {
+      // Save without the _search index or source label; they're rebuilt on load
+      const toSave = this.fileSources.map(source => ({
+        name: source.name,
+        folders: [...source.folders],
+        bookmarks: source.bookmarks.map(({ title, url, folder, dateAdded }) => ({ title, url, folder, dateAdded }))
+      }));
+      localStorage.setItem('bookmarkViewer_files', JSON.stringify(toSave));
     } catch (error) {
       console.error('Failed to save bookmarks:', error);
       this.showError('Bookmarks loaded, but too large to save for next time.');
@@ -657,9 +715,8 @@ class BookmarkViewer {
 
   clearPersistedBookmarks() {
     try {
-      localStorage.removeItem('bookmarkViewer_bookmarks');
-      localStorage.removeItem('bookmarkViewer_folders');
-      localStorage.removeItem('bookmarkViewer_source');
+      localStorage.removeItem('bookmarkViewer_files');
+      localStorage.removeItem('bookmarkViewer_browser');
     } catch (error) {
       console.error('Failed to clear persisted bookmarks:', error);
     }

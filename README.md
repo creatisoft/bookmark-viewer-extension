@@ -2,7 +2,7 @@
 
 Bookmark Viewer is a Manifest V3 browser extension for loading, searching, and exporting bookmarks from a compact popup UI.
 
-Current extension version: **2.5.0**
+Current extension version: **2.5.1**
 
 <img width="420" height="600" alt="bookmarkview2-new" src="https://github.com/user-attachments/assets/0fceebd7-ec3c-405a-a79a-e7470069a722" />
 <img width="420" height="600" alt="bookmarkview2-controls-new" src="https://github.com/user-attachments/assets/08a8473e-6866-43ad-b440-db2655cee4ba" />
@@ -35,13 +35,15 @@ After pulling new changes, click **Reload** on the extension's card in `chrome:/
 ## Usage
 
 1. Click the Bookmark Viewer extension icon.
-2. Load data using one of the following options:
+2. Load data using any combination of the following. Everything you load is shown together in one list:
 	 - **Load Browser Bookmarks**: shows your current browser bookmarks. They're re-read each time the popup opens, so new or deleted bookmarks always show up.
-	 - **Upload Bookmark File** (`.html` or `.json`): an exported bookmarks file. It's saved so it's still there the next time you open the popup.
-3. Use the search box to filter the list. Each word is matched separately against the title, URL, and folder, so `github work` finds bookmarks containing both words.
+	 - **Upload Bookmark File** (`.html` or `.json`): an exported bookmarks file. You can upload several files; each one is saved so it's still there the next time you open the popup. Uploading a file with the same name again replaces its earlier copy.
+
+	 When more than one source is loaded, each bookmark shows a small label with where it came from (for example `Browser Bookmarks` or `work.html`).
+3. Use the search box to filter the list. Each word is matched separately against the title, URL, folder, and source, so `github work` finds bookmarks containing both words.
 4. Click any bookmark to open it in a new tab. **Ctrl+click** (**Cmd+click** on macOS) opens it in a background tab and keeps the popup open.
 5. Use **Export** to download the loaded list as an HTML bookmarks file. Nested folders and the original date-added are kept, so the file can be imported back into any browser.
-6. Use **Clear List** to reset the popup state.
+6. Use **Clear List** to remove everything that's loaded (browser bookmarks and all uploaded files).
 7. Use the color wheel in the top-right to choose a custom background color (saved across popup sessions). Click **↺** to go back to the theme's default. On light colors, the text switches to dark so it stays readable.
 8. Use the 🌙 / ☀️ button to switch between light and dark mode.
 
