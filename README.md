@@ -39,7 +39,7 @@ After pulling new changes, click **Reload** on the extension's card in `chrome:/
 	 - **Load Browser Bookmarks**: shows your current browser bookmarks. They're re-read each time the popup opens, so new or deleted bookmarks always show up.
 	 - **Upload Bookmark File** (`.html` or `.json`): an exported bookmarks file. You can upload several files; each one is saved so it's still there the next time you open the popup. Uploading a file with the same name again replaces its earlier copy.
 
-	 When more than one source is loaded, each bookmark shows a small label with where it came from (for example `Browser Bookmarks` or `work.html`).
+	 When more than one source is loaded, each bookmark shows a small label with where it came from (for example `Browser Bookmarks` or `work.html`). A URL that appears more than once is shown only once (browser bookmarks first, then files in the order you uploaded them), and the info line says how many duplicates were hidden.
 3. Use the search box to filter the list. Each word is matched separately against the title, URL, folder, and source, so `github work` finds bookmarks containing both words.
 4. Click any bookmark to open it in a new tab. **Ctrl+click** (**Cmd+click** on macOS) opens it in a background tab and keeps the popup open.
 5. Use **Export** to download the loaded list as an HTML bookmarks file. Nested folders and the original date-added are kept, so the file can be imported back into any browser.

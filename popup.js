@@ -547,8 +547,19 @@ class BookmarkViewer {
     this.bookmarks = [];
     this.folders = new Set();
 
+    // A URL that's in more than one source is shown once, from the first source
+    // that has it (browser bookmarks first, then files in upload order)
+    const seenUrls = new Set();
+    let duplicates = 0;
+
     for (const source of sources) {
       for (const bookmark of source.bookmarks) {
+        const key = this.normalizeUrl(bookmark.url);
+        if (seenUrls.has(key)) {
+          duplicates++;
+          continue;
+        }
+        seenUrls.add(key);
         bookmark.source = source.name;
         this.bookmarks.push(bookmark);
       }
@@ -556,17 +567,29 @@ class BookmarkViewer {
     }
 
     this.buildSearchIndex();
-    this.updateFileInfo(sources);
+    this.updateFileInfo(sources, duplicates);
     this.filterBookmarks(document.getElementById('searchInput').value);
     this.updateStats();
     this.showClearButton();
   }
 
-  updateFileInfo(sources) {
+  // Treat URLs that differ only in host case or a bare trailing slash as the same
+  normalizeUrl(url) {
+    try {
+      return new URL(url).href;
+    } catch (error) {
+      return url;
+    }
+  }
+
+  updateFileInfo(sources, duplicates = 0) {
     const fileInfo = document.getElementById('fileInfo');
-    fileInfo.textContent = sources.length
-      ? 'Loaded: ' + sources.map(s => `${s.name} (${s.bookmarks.length})`).join(', ')
-      : '';
+    if (!sources.length) {
+      fileInfo.textContent = '';
+      return;
+    }
+    const loaded = 'Loaded: ' + sources.map(s => `${s.name} (${s.bookmarks.length})`).join(', ');
+    fileInfo.textContent = duplicates ? `${loaded} · ${duplicates} duplicates hidden` : loaded;
   }
 
   showClearButton() {
