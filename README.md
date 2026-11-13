@@ -2,7 +2,7 @@
 
 Bookmark Viewer is a Manifest V3 browser extension for loading, searching, and exporting bookmarks from a compact popup UI.
 
-Current extension version: **2.5.1**
+Current extension version: **2.5.2**
 
 <img width="420" height="600" alt="bookmarkview2-new" src="https://github.com/user-attachments/assets/0fceebd7-ec3c-405a-a79a-e7470069a722" />
 <img width="420" height="600" alt="bookmarkview2-controls-new" src="https://github.com/user-attachments/assets/08a8473e-6866-43ad-b440-db2655cee4ba" />
